@@ -663,10 +663,9 @@
           day: 'numeric', month: 'short', year: 'numeric'
         });
 
-        const downloadBtn = file.downloadUrl
-          ? `<a class="action-btn download" href="${file.downloadUrl}" target="_blank"
-                rel="noopener noreferrer" title="Download file"
-                onclick="event.stopPropagation();">↓ Download</a>`
+        const downloadBtn = (file.id && file.type !== 'Folder')
+          ? `<button class="action-btn download" title="Download file"
+                onclick="event.stopPropagation(); downloadFile('${file.id}', '${escapeHtml(file.name)}');">↓ Download</button>`
           : '';
 
         return `
@@ -814,6 +813,59 @@
         pendingFiles = [];
         renderUploadList();
       }, 2000);
+    }
+
+    // ── Download via Apps Script Proxy ─────────────────
+    async function downloadFile(fileId, fileName) {
+      // Find the button and show loading state
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = '⏳ Fetching…';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(`${SCRIPT_URL}?download=${fileId}`);
+        const base64Data = await response.text();
+
+        // Check if it's an error JSON response
+        try {
+          const errCheck = JSON.parse(base64Data);
+          if (errCheck.success === false) {
+            throw new Error(errCheck.error || 'Download failed');
+          }
+        } catch (jsonErr) {
+          // Not JSON — it's valid base64 data, continue
+          if (jsonErr.message && jsonErr.message.includes('Download failed')) throw jsonErr;
+        }
+
+        // Convert base64 to blob and trigger browser download
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray]);
+
+        // Create download link and click it
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        btn.textContent = '✓ Done';
+        setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 2000);
+
+      } catch (err) {
+        btn.textContent = '✕ Failed';
+        btn.disabled = false;
+        setTimeout(() => { btn.textContent = originalText; }, 2000);
+        showError($error, 'Download failed: ' + err.message);
+      }
     }
 
     // ── Helpers ──────────────────────────────────────────
