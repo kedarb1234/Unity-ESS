@@ -527,22 +527,16 @@
     <div id="uploadPanel" style="display:none;">
       <section class="upload-section visible">
         <div class="search-title">Upload files to Google Drive</div>
-        <div class="upload-dropzone" id="dropzone">
-          <input type="file" id="fileInput" multiple />
+        <a class="upload-dropzone" id="dropzone"
+           href="https://drive.google.com/drive/u/1/folders/1tiWru1dnACT3SdCHfFbVhAUaJ8-mBrjK"
+           target="_blank" rel="noopener noreferrer"
+           style="display:block; text-decoration:none; color:inherit;">
           <div class="icon">📤</div>
-          <h3>Drag & drop files here or click to browse</h3>
-          <p>Files will be uploaded to the sorting inbox on Drive</p>
-        </div>
-
-        <div class="upload-file-list" id="uploadFileList"></div>
-
-        <div class="upload-actions" id="uploadActions" style="display:none;">
-          <button class="upload-btn" id="uploadBtn" onclick="uploadFiles()">Upload All</button>
-        </div>
+          <h3>Click to open the Upload Inbox on Google Drive</h3>
+          <p>Drag & drop your files directly into the Drive folder that opens.<br>
+             Files land in the sorting inbox — you can organise them later.</p>
+        </a>
       </section>
-
-      <div class="error-banner" id="uploadErrorBanner"></div>
-      <div class="success-banner" id="uploadSuccessBanner"></div>
     </div>
 
   </main>
@@ -558,8 +552,6 @@
     // ── State ────────────────────────────────────────────
     let activeFilter = '';
     let isLoading = false;
-    let pendingFiles = [];  // files queued for upload
-
     // ── DOM ──────────────────────────────────────────────
     const $input       = document.getElementById('searchInput');
     const $btn         = document.getElementById('searchBtn');
@@ -570,13 +562,6 @@
     const $error       = document.getElementById('errorBanner');
     const $searchPanel = document.getElementById('searchPanel');
     const $uploadPanel = document.getElementById('uploadPanel');
-    const $dropzone    = document.getElementById('dropzone');
-    const $fileInput   = document.getElementById('fileInput');
-    const $uploadList  = document.getElementById('uploadFileList');
-    const $uploadActions = document.getElementById('uploadActions');
-    const $uploadBtn   = document.getElementById('uploadBtn');
-    const $uploadError = document.getElementById('uploadErrorBanner');
-    const $uploadSuccess = document.getElementById('uploadSuccessBanner');
 
     // ── Tab Switching ────────────────────────────────────
     function switchTab(tab) {
@@ -692,165 +677,6 @@
     }
 
     // ── Upload: Drag & Drop + File Select ────────────────
-    $dropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      $dropzone.classList.add('dragover');
-    });
-
-    $dropzone.addEventListener('dragleave', () => {
-      $dropzone.classList.remove('dragover');
-    });
-
-    $dropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      $dropzone.classList.remove('dragover');
-      addFiles(e.dataTransfer.files);
-    });
-
-    $fileInput.addEventListener('change', () => {
-      addFiles($fileInput.files);
-      $fileInput.value = '';  // reset so same file can be re-selected
-    });
-
-    function addFiles(fileList) {
-      for (const f of fileList) {
-        // Avoid duplicates
-        if (!pendingFiles.find(p => p.name === f.name && p.size === f.size)) {
-          pendingFiles.push(f);
-        }
-      }
-      renderUploadList();
-    }
-
-    function removeFile(index) {
-      pendingFiles.splice(index, 1);
-      renderUploadList();
-    }
-
-    function renderUploadList() {
-      if (pendingFiles.length === 0) {
-        $uploadList.innerHTML = '';
-        $uploadActions.style.display = 'none';
-        return;
-      }
-
-      $uploadActions.style.display = 'flex';
-      $uploadList.innerHTML = pendingFiles.map((f, i) => `
-        <div class="upload-file-item" id="upload-item-${i}">
-          <span class="file-name">${escapeHtml(f.name)}</span>
-          <span class="file-size">${friendlySize(f.size)}</span>
-          <span class="file-status" id="upload-status-${i}">Ready</span>
-          <button class="remove-btn" onclick="removeFile(${i})" title="Remove">✕</button>
-        </div>
-      `).join('');
-    }
-
-    // ── Upload: Send Files ───────────────────────────────
-    async function uploadFiles() {
-      if (pendingFiles.length === 0) return;
-
-      $uploadBtn.disabled = true;
-      $uploadBtn.textContent = 'Uploading…';
-      $uploadError.classList.remove('visible');
-      $uploadSuccess.classList.remove('visible');
-
-      let successCount = 0;
-      let failCount = 0;
-
-      for (let i = 0; i < pendingFiles.length; i++) {
-        const file = pendingFiles[i];
-        const statusEl = document.getElementById(`upload-status-${i}`);
-        const removeBtn = document.querySelector(`#upload-item-${i} .remove-btn`);
-
-        statusEl.textContent = 'Uploading…';
-        statusEl.className = 'file-status uploading';
-        if (removeBtn) removeBtn.style.display = 'none';
-
-        try {
-          const base64 = await fileToBase64(file);
-
-          // Apps Script POST redirects (302) which mangles JSON parsing.
-          // Solution: fetch with no-cors to avoid redirect issues,
-          // then verify upload succeeded via a lightweight check.
-          const payload = JSON.stringify({
-            fileName: file.name,
-            fileData: base64,
-            mimeType: file.type || 'application/octet-stream'
-          });
-
-          let uploadOk = false;
-
-          try {
-            // Try standard fetch first (works in some browser/CORS configs)
-            const response = await fetch(SCRIPT_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: payload,
-              redirect: 'follow'
-            });
-
-            const text = await response.text();
-
-            // Try to parse as JSON
-            try {
-              const data = JSON.parse(text);
-              uploadOk = data.success === true;
-            } catch (jsonErr) {
-              // Response isn't valid JSON — could be redirect artifact.
-              // If we got a 200 response, the upload likely succeeded.
-              uploadOk = response.ok || response.status === 0;
-            }
-          } catch (fetchErr) {
-            // If standard fetch fails (CORS), try no-cors mode
-            // We can't read the response but the server still processes it
-            try {
-              await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: payload
-              });
-              // no-cors returns opaque response — assume success if no network error
-              uploadOk = true;
-            } catch (noCorsErr) {
-              uploadOk = false;
-            }
-          }
-
-          if (uploadOk) {
-            statusEl.textContent = 'Uploaded ✓';
-            statusEl.className = 'file-status success';
-            successCount++;
-          } else {
-            statusEl.textContent = 'Failed';
-            statusEl.className = 'file-status error';
-            failCount++;
-          }
-        } catch (err) {
-          statusEl.textContent = 'Failed';
-          statusEl.className = 'file-status error';
-          failCount++;
-        }
-      }
-
-      $uploadBtn.disabled = false;
-      $uploadBtn.textContent = 'Upload All';
-
-      if (successCount > 0) {
-        $uploadSuccess.textContent = `${successCount} file${successCount > 1 ? 's' : ''} uploaded successfully to Drive.`;
-        $uploadSuccess.classList.add('visible');
-      }
-      if (failCount > 0) {
-        showError($uploadError, `${failCount} file${failCount > 1 ? 's' : ''} failed to upload.`);
-      }
-
-      // Clear successful files after 2 seconds
-      setTimeout(() => {
-        pendingFiles = [];
-        renderUploadList();
-      }, 2000);
-    }
-
     // ── Download via Apps Script Proxy ─────────────────
     async function downloadFile(fileId, fileName) {
       // Find the button and show loading state
@@ -905,27 +731,6 @@
     }
 
     // ── Helpers ──────────────────────────────────────────
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          // Remove the data:...;base64, prefix
-          const base64 = reader.result.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function friendlySize(bytes) {
-      if (bytes === 0) return '—';
-      const units = ['B', 'KB', 'MB', 'GB'];
-      let i = 0, size = bytes;
-      while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
-      return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
-    }
-
     function showError(el, msg) {
       el.textContent = msg;
       el.classList.add('visible');
