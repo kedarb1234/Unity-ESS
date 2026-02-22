@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UnityESS Document Fetcher</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --ornate-orange: #E8611A;
+      --ornate-dark:   #1A1A1A;
+      --ornate-gray:   #F5F5F5;
+      --ornate-mid:    #6B7280;
+      --ornate-border: #E5E7EB;
+      --ornate-white:  #FFFFFF;
+      --radius:        8px;
+      --shadow:        0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-lg:     0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--ornate-gray);
+      color: var(--ornate-dark);
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    .header {
+      background: var(--ornate-white);
+      border-bottom: 3px solid var(--ornate-orange);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-brand .logo-text {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ornate-dark);
+    }
+
+    .header-brand .logo-text span {
+      color: var(--ornate-orange);
+    }
+
+    .header-subtitle {
+      font-size: 13px;
+      color: var(--ornate-mid);
+      font-weight: 400;
+    }
+
+    .header-badge {
+      background: var(--ornate-orange);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Main Container ───────────────────────────────────── */
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+
+    /* ── Search Section ───────────────────────────────────── */
+    .search-section {
+      background: var(--ornate-white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .search-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ornate-dark);
+      margin-bottom: 16px;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid var(--ornate-border);
+      border-radius: var(--radius);
+      font-size: 15px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--ornate-orange);
+    }
+
+    .search-input::placeholder {
+      color: #9CA3AF;
+    }
+
+    .search-btn {
+      padding: 12px 24px;
+      background: var(--ornate-orange);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .search-btn:hover { background: #D4550F; }
+    .search-btn:active { transform: scale(0.97); }
+    .search-btn:disabled {
+      background: #D1D5DB;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Filter Bar ───────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    .filter-chip {
+      padding: 5px 12px;
+      border: 1px solid var(--ornate-border);
+      border-radius: 16px;
+      font-size: 12px;
+      color: var(--ornate-mid);
+      cursor: pointer;
+      background: var(--ornate-white);
+      transition: all 0.15s;
+    }
+
+    .filter-chip:hover { border-color: var(--ornate-orange); color: var(--ornate-orange); }
+    .filter-chip.active {
+      background: var(--ornate-orange);
+      color: white;
+      border-color: var(--ornate-orange);
+    }
+
+    /* ── Status Bar ───────────────────────────────────────── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      min-height: 24px;
+    }
+
+    .status-text {
+      font-size: 13px;
+      color: var(--ornate-mid);
+    }
+
+    .status-text strong { color: var(--ornate-dark); }
+
+    /* ── Loading Spinner ──────────────────────────────────── */
+    .spinner {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .spinner.visible { display: block; }
+
+    .spinner-ring {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--ornate-border);
+      border-top-color: var(--ornate-orange);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .spinner-text { font-size: 14px; color: var(--ornate-mid); }
+
+    /* ── Results List ─────────────────────────────────────── */
+    .results-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .result-card {
+      background: var(--ornate-white);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.2s, transform 0.1s;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .result-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-1px);
+    }
+
+    .result-icon { font-size: 28px; flex-shrink: 0; }
+
+    .result-info { flex: 1; min-width: 0; }
+
+    .result-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ornate-dark);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .result-meta {
+      font-size: 12px;
+      color: var(--ornate-mid);
+      margin-top: 3px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .result-type-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #FFF7ED;
+      color: var(--ornate-orange);
+      flex-shrink: 0;
+    }
+
+    .result-open {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ornate-orange);
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .result-open:hover { text-decoration: underline; }
+
+    /* ── Empty / Error States ─────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--ornate-mid);
+    }
+
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 16px; color: var(--ornate-dark); margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; }
+
+    .error-banner {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      color: #991B1B;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .error-banner.visible { display: block; }
+
+    /* ── Setup Banner ─────────────────────────────────────── */
+    .setup-banner {
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #92400E;
+      line-height: 1.6;
+    }
+
+    .setup-banner code {
+      background: #FEF3C7;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      padding: 32px 20px;
+      font-size: 12px;
+      color: #9CA3AF;
+    }
+
+    .footer a { color: var(--ornate-orange); text-decoration: none; }
+
+    /* ── Responsive ───────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .search-bar { flex-direction: column; }
+      .header { padding: 12px 16px; }
+      .container { padding: 16px 12px; }
+      .result-card { padding: 12px 14px; }
+      .result-meta { flex-direction: column; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-brand">
+      <div>
+        <div class="logo-text"><span>Unity</span>ESS Document Fetcher</div>
+        <div class="header-subtitle">Ornate Solar · Inverted Energy</div>
+      </div>
+    </div>
+    <div class="header-badge">INTERNAL</div>
+  </header>
+
+  <!-- ── Main ───────────────────────────────────────────── -->
+  <main class="container">
+
+    <!-- Setup Banner (hidden once SCRIPT_URL is configured) -->
+    <div class="setup-banner" id="setupBanner" style="display:none;">
+      ⚠️ <strong>Setup required:</strong> Open this file and replace <code>SCRIPT_URL</code> with
+      your deployed Google Apps Script web app URL. See the deployment guide for instructions.
+    </div>
+
+    <!-- Search -->
+    <section class="search-section">
+      <div class="search-title">Search your Google Drive documents</div>
+      <div class="search-bar">
+        <input
+          type="text"
+          class="search-input"
+          id="searchInput"
+          placeholder="e.g.  CATL, BMS datasheet, commissioning report…"
+          autofocus
+        />
+        <button class="search-btn" id="searchBtn" onclick="performSearch()">Search</button>
+      </div>
+
+      <!-- Type Filters -->
+      <div class="filter-bar">
+        <button class="filter-chip active" data-type="" onclick="setFilter(this)">All</button>
+        <button class="filter-chip" data-type="pdf" onclick="setFilter(this)">PDF</button>
+        <button class="filter-chip" data-type="doc" onclick="setFilter(this)">Google Docs</button>
+        <button class="filter-chip" data-type="sheet" onclick="setFilter(this)">Sheets</button>
+        <button class="filter-chip" data-type="slide" onclick="setFilter(this)">Slides</button>
+        <button class="filter-chip" data-type="docx" onclick="setFilter(this)">Word</button>
+        <button class="filter-chip" data-type="xlsx" onclick="setFilter(this)">Excel</button>
+        <button class="filter-chip" data-type="image" onclick="setFilter(this)">Images</button>
+        <button class="filter-chip" data-type="folder" onclick="setFilter(this)">Folders</button>
+      </div>
+    </section>
+
+    <!-- Error Banner -->
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- Status -->
+    <div class="status-bar">
+      <div class="status-text" id="statusText"></div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="spinner" id="spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-text">Searching your Drive…</div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-list" id="resultsList"></div>
+
+    <!-- Empty State (shown on first load) -->
+    <div class="empty-state" id="emptyState">
+      <div class="icon">🔍</div>
+      <h3>Search your UnityESS documents</h3>
+      <p>Type a keyword above to find files across your entire Google Drive.</p>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    Built for <a href="https://ornatesolar.com" target="_blank">Ornate Solar</a> ·
+    Powered by Google Drive &amp; GitHub Pages
+  </footer>
+
+  <!-- ── JavaScript ─────────────────────────────────────── -->
+  <script>
+    // ╔══════════════════════════════════════════════════════╗
+    // ║  CONFIGURATION — Replace this URL after deploying   ║
+    // ║  your Google Apps Script as a Web App.              ║
+    // ╚══════════════════════════════════════════════════════╝
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxM2-g0ybzVKC4u5qzBSlq8DRiOLnaYX4fdwFmd6MdwaFwihRh_NcjSKguT7Xwg3Wkr/exec';
+
+    // ── State ────────────────────────────────────────────
+    let activeFilter = '';
+    let isLoading = false;
+
+    // ── DOM References ───────────────────────────────────
+    const $input     = document.getElementById('searchInput');
+    const $btn       = document.getElementById('searchBtn');
+    const $spinner   = document.getElementById('spinner');
+    const $results   = document.getElementById('resultsList');
+    const $status    = document.getElementById('statusText');
+    const $empty     = document.getElementById('emptyState');
+    const $error     = document.getElementById('errorBanner');
+    const $setup     = document.getElementById('setupBanner');
+
+    // Show setup banner if URL not configured
+    if (SCRIPT_URL.includes('YOUR_APPS_SCRIPT')) {
+      $setup.style.display = 'block';
+    }
+
+    // ── Enter key triggers search ────────────────────────
+    $input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') performSearch();
+    });
+
+    // ── Filter chip handler ──────────────────────────────
+    function setFilter(chip) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      activeFilter = chip.dataset.type;
+
+      // Re-search if there's already a query
+      if ($input.value.trim()) performSearch();
+    }
+
+    // ── Main Search Function ─────────────────────────────
+    async function performSearch() {
+      const query = $input.value.trim();
+      if (!query || isLoading) return;
+
+      // Validate configuration
+      if (SCRIPT_URL.includes('YOUR_APPS_SCRIPT')) {
+        showError('Please configure SCRIPT_URL first. See setup instructions.');
+        return;
+      }
+
+      isLoading = true;
+      $btn.disabled = true;
+      $btn.textContent = 'Searching…';
+      $spinner.classList.add('visible');
+      $results.innerHTML = '';
+      $empty.style.display = 'none';
+      $error.classList.remove('visible');
+      $status.innerHTML = '';
+
+      const startTime = performance.now();
+
+      try {
+        const params = new URLSearchParams({ q: query });
+        if (activeFilter) params.append('type', activeFilter);
+
+        const response = await fetch(`${SCRIPT_URL}?${params.toString()}`);
+        const data = await response.json();
+
+        const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+
+        if (!data.success) {
+          showError(data.error || 'Unknown error from server.');
+          return;
+        }
+
+        if (data.results.length === 0) {
+          $empty.innerHTML = `
+            <div class="icon">📭</div>
+            <h3>No files found</h3>
+            <p>No files matching "<strong>${escapeHtml(query)}</strong>" were found.
+               Try different keywords or remove the type filter.</p>
+          `;
+          $empty.style.display = 'block';
+          $status.innerHTML = `<strong>0</strong> results · ${elapsed}s`;
+          return;
+        }
+
+        $status.innerHTML = `<strong>${data.count}</strong> result${data.count !== 1 ? 's' : ''} · ${elapsed}s`;
+
+        renderResults(data.results);
+
+      } catch (err) {
+        if (err.name === 'TypeError' && err.message.includes('fetch')) {
+          showError('Network error — check your SCRIPT_URL or internet connection.');
+        } else {
+          showError('Error: ' + err.message);
+        }
+      } finally {
+        isLoading = false;
+        $btn.disabled = false;
+        $btn.textContent = 'Search';
+        $spinner.classList.remove('visible');
+      }
+    }
+
+    // ── Render Results ───────────────────────────────────
+    function renderResults(results) {
+      const html = results.map(file => {
+        const date = new Date(file.lastUpdated);
+        const dateStr = date.toLocaleDateString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric'
+        });
+
+        return `
+          <a class="result-card" href="${file.url}" target="_blank" rel="noopener noreferrer" title="Open in Google Drive">
+            <div class="result-icon">${file.iconUrl}</div>
+            <div class="result-info">
+              <div class="result-name">${escapeHtml(file.name)}</div>
+              <div class="result-meta">
+                <span>${dateStr}</span>
+                <span>${file.size}</span>
+              </div>
+            </div>
+            <div class="result-type-badge">${file.type}</div>
+            <div class="result-open">Open →</div>
+          </a>
+        `;
+      }).join('');
+
+      $results.innerHTML = html;
+    }
+
+    // ── Helpers ──────────────────────────────────────────
+    function showError(msg) {
+      $error.textContent = msg;
+      $error.classList.add('visible');
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
