@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Rooftop Pricing Engine — High Rise Buildings</title>
+<style>
+:root{
+  --ink:#0f1720; --ink2:#6b7280; --line:#e7e9ee; --bg:#ffffff; --panel:#f4f5f7; --card:#ffffff;
+  --blue:#2f6fed; --blue-deep:#1d4ed8; --blue-soft:#e8f1fd; --blue-band:#edf4fc; --blue-bar:#9cc4f8;
+  --orange:#f97316; --orange-soft:#fff4e8; --yellow-soft:#fdf7df;
+  --ok:#16a34a; --warn:#b45309; --bad:#dc2626; --radius:16px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+/* ---- top header (Grid-Insight style) ---- */
+header{background:#fff;padding:14px 28px;display:flex;align-items:center;gap:28px;position:sticky;top:0;z-index:60;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:170px}
+.brand .mark{width:44px;height:44px;border-radius:50%;background:var(--blue-soft);display:flex;align-items:center;justify-content:center;flex:none}
+.brand .word{font-size:16px;font-weight:800;line-height:1.06;letter-spacing:.02em}
+#nav{display:flex;gap:6px;overflow-x:auto}
+#nav button{border:0;background:none;padding:10px 16px;font-size:14.5px;font-weight:600;color:#374151;cursor:pointer;border-radius:10px;white-space:nowrap;font-family:inherit}
+#nav button:hover{background:#f7f8fa}
+#nav button.on{background:#f1f3f5;color:#0f1720}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+/* ---- sub bar: selectors + download ---- */
+.subbar{background:#fff;border-bottom:1px solid var(--line);padding:14px 28px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:73px;z-index:55}
+.selbox{border:1px solid #d9dde3;border-radius:9px;padding:9px 16px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:10px;background:#fff}
+.selbox .lite{font-weight:500;color:var(--ink2)}
+.selbox svg{flex:none}
+/* ---- KPI band ---- */
+#kpis{display:flex;background:var(--blue-band);border:1px solid #dfeafa;border-radius:12px;margin:20px 28px 0;overflow-x:auto}
+.kpi{flex:1;min-width:170px;display:flex;align-items:center;gap:12px;padding:15px 20px;border-right:1px solid #d8e6f7}
+.kpi:last-child{border-right:0}
+.kpi .ic{width:36px;height:36px;border-radius:50%;background:#fff;border:1.5px solid var(--blue-deep);color:var(--blue-deep);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none;font-weight:700}
+.kpi .l{font-size:13px;color:#374151;font-weight:500}
+.kpi .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+main{max-width:1360px;margin:0 auto;padding:20px 28px 90px}
+/* ---- cards ---- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-bottom:18px}
+.card h2{font-size:19px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:10px;letter-spacing:-.01em;flex-wrap:wrap}
+.card h2 .tag{font-size:12px;font-weight:600;color:#374151;background:#f1f3f5;border-radius:999px;padding:5px 13px;letter-spacing:0}
+.card h2 .tag.blue{background:var(--blue-soft);color:var(--blue-deep)}
+.grid{display:grid;gap:14px 20px}
+.g3{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.f label{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin-bottom:5px}
+.f input,.f select{width:100%;padding:10px 12px;border:1px solid #d9dde3;border-radius:9px;font-size:14px;font-weight:600;background:#fff;color:var(--ink);font-family:inherit}
+.f input:focus,.f select:focus{outline:3px solid var(--blue-soft);border-color:var(--blue)}
+.f .hint{font-size:11.5px;color:var(--ink2);margin-top:3px;font-weight:500}
+/* ---- tables ---- */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-size:13.5px;font-weight:700;color:#0f1720;text-align:left;padding:11px 10px;border-bottom:1px solid var(--line);background:#fafbfc}
+th:first-child{border-top-left-radius:10px} th:last-child{border-top-right-radius:10px}
+td{padding:10px;border-bottom:1px solid #f0f2f4;vertical-align:middle}
+tr:hover td{background:#fafcff}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+th.num{text-align:right}
+.cat{font-size:11px;font-weight:600;color:var(--blue-deep);background:var(--blue-soft);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.tot td{font-weight:800;background:var(--blue-band);border-top:2px solid var(--blue-bar);font-size:14px}
+.sub-t td{font-weight:700;background:#f6f8fa}
+td input,td select{width:100%;min-width:56px;padding:6px 8px;border:1px solid #d9dde3;border-radius:8px;font-size:13px;font-weight:600;background:#fff;font-family:inherit}
+/* ---- buttons: black pill primary / outlined pill secondary ---- */
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid #d9dde3;background:#fff;color:var(--ink);border-radius:999px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .12s, background .12s}
+.btn:hover{background:#f7f8fa}
+.btn.pri{background:#111318;border-color:#111318;color:#fff}
+.btn.pri:hover{opacity:.86;background:#111318}
+.btn.sm{padding:7px 15px;font-size:13px}
+.btn.blockcta{width:100%;justify-content:center;padding:15px;border-radius:999px;font-size:15.5px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{font-size:11px;font-weight:600;border-radius:999px;padding:2px 10px}
+.pill.g{background:#e6f6ec;color:var(--ok)} .pill.r{background:#fdeceb;color:var(--bad)} .pill.y{background:#fef3e2;color:var(--warn)}
+/* ---- notes (yellow banner like "Upload 12 months...") ---- */
+.note{font-size:13px;color:#374151;background:var(--yellow-soft);border:1px solid #f3e9bd;padding:11px 15px;border-radius:10px;margin:12px 0;font-weight:500}
+.note.blue{background:var(--blue-band);border-color:#dfeafa}
+.note.green{background:#e9f7ee;border-color:#cdebd8}
+.note.warnb{background:#fdf0e6;border-color:#f5ddc4}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+/* ---- stat tiles (tinted like Actual/Expected Injection) ---- */
+.big{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat{padding:16px 18px;border-radius:12px;background:var(--panel)}
+.stat.orange{background:var(--orange-soft)} .stat.blue{background:var(--blue-soft)}
+.stat .l{font-size:13px;color:#374151;font-weight:500;margin-bottom:4px}
+/* ---- CSS bar chart ---- */
+.bars{display:flex;align-items:flex-end;gap:10px;height:190px;padding:8px 4px 0}
+.barwrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.bar{width:100%;max-width:52px;background:var(--blue-bar);border-radius:7px 7px 0 0;transition:height .3s}
+.bar.ghost{background:#eef0f3}
+.barwrap .bl{font-size:11px;color:var(--ink2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.barwrap .bv{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+#lock{max-width:400px;margin:60px auto;text-align:center}
+.mut{color:var(--ink2)} .b{font-weight:700}
+/* ---- segmented toggle (Old|New style) ---- */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#f6f7f9}
+.seg button{border:0;background:none;padding:8px 18px;font-weight:700;font-size:13.5px;color:#9aa2ad;cursor:pointer;font-family:inherit}
+.seg button.on{background:#fff;color:#0f1720;border-radius:10px;box-shadow:0 1px 3px rgba(16,24,40,.1)}
+@media print{
+  header,.subbar,#kpis,.noprint{display:none!important} main{padding:0;max-width:none}
+  .card{border:none;box-shadow:none;page-break-inside:avoid}
+  body{background:#fff}
+  .print-only{display:block!important}
+}
+.print-only{display:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><g stroke="#2f6fed" stroke-width="2.2" stroke-linecap="round"><line x1="13" y1="3" x2="13" y2="8"/><line x1="20.1" y1="5.9" x2="16.5" y2="9.5"/><line x1="23" y1="13" x2="18" y2="13"/><line x1="5.9" y1="5.9" x2="9.5" y2="9.5"/><line x1="3" y1="13" x2="8" y2="13"/><line x1="6.5" y1="19.5" x2="9.8" y2="16.2"/><line x1="13" y1="22" x2="13" y2="17.5"/><line x1="19.5" y1="19.5" x2="16.2" y2="16.2"/></g></svg>
+    </div>
+    <div class="word">SOLAR<br>PRICING</div>
+  </div>
+  <nav id="nav"></nav>
+  <div class="hdr-right">
+    <button class="btn pri sm" onclick="window.print()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      Download Report</button>
+  </div>
+</header>
+<div class="subbar">
+  <div class="selbox" id="sb-proj"></div>
+  <div class="selbox" id="sb-meta"></div>
+  <div style="margin-left:auto" class="row">
+    <div class="selbox" id="sb-price"></div>
+  </div>
+</div>
+<div id="kpis"></div>
+<main id="main"></main>
+
+<script>
+"use strict";
+if(typeof structuredClone==="undefined"){ window.structuredClone = o=>JSON.parse(JSON.stringify(o)); }
+/* ================================================================
+   DATABASE — every value below is editable in the Admin tab.
+   Seeded from the Feb'25 workbook (Rate Input Sheet / Backend /
+   Margin Profile cached values).
+================================================================ */
+const DEFAULT_DB = {
+  meta:{version:"1.0", updated:"2026-07-11", passcode:"admin@123"},
+  modules:[
+    {name:"MPerc Bifacial DCR",     wp:540, rate:22.5, dcr:true},
+    {name:"MPerc Bifacial DCR 550", wp:550, rate:22.5, dcr:true},
+    {name:"MPerc Bifacial DCR 560", wp:560, rate:22.5, dcr:true},
+    {name:"MPerc Bifacial NDCR",    wp:540, rate:14.6, dcr:false}
+  ],
+  inverters:{
+    Sungrow:[{sku:"SG10",kw:10,price:55000},{sku:"SG12",kw:12,price:57000},{sku:"SG15",kw:15,price:74000},{sku:"SG20",kw:20,price:75720},{sku:"SG33",kw:33,price:127000},{sku:"SG50",kw:50,price:156860},{sku:"SG100",kw:100,price:280000},{sku:"SG125",kw:125,price:308000}],
+    Growatt:[{sku:"MAX10TL",kw:10,price:57400},{sku:"MAX15TL",kw:15,price:64000},{sku:"MAX20TL",kw:20,price:83200},{sku:"MAX25TL",kw:25,price:85800},{sku:"MAX30TL",kw:30,price:116700},{sku:"MAX40TL",kw:40,price:138600},{sku:"MAX50TL",kw:50,price:150000},{sku:"MAX60TL",kw:60,price:159000},{sku:"MAX70TL",kw:70,price:215400},{sku:"MAX80TL",kw:80,price:220700},{sku:"MAX100TL",kw:100,price:275000},{sku:"MAX125TL",kw:125,price:300700}],
+    SolarEdge:[{sku:"SE5k",kw:5,price:69500},{sku:"SE8k",kw:8,price:50000},{sku:"SE10k",kw:10,price:46500},{sku:"SE15k",kw:15,price:84000},{sku:"SE17.6k",kw:17,price:84000},{sku:"SE27.6K",kw:27.6,price:110000},{sku:"SE33k",kw:33.3,price:116320},{sku:"SE66.6K",kw:66.6,price:212316},{sku:"SE100K",kw:100,price:296430}],
+    Enphase:[{sku:"IQ8P",kw:0.48,price:7798},{sku:"IQ8HC",kw:0.384,price:6515}]
+  },
+  optimisers:{ B650:{price:2800, perModules:1}, S1200:{price:3600, perModules:2}, s1200ThresholdKw:15,
+    stringsPerModules:{B650:14, S1200:30, other:18} },
+  dcdbSlabs:[[5,3000],[8,3000],[10,4000],[15,4000],[17,4000],[20,5000],[25,5000],[27.6,5000],[30,5000],[33,5000],[40,7500],[50,7500],[60,7500],[70,7500],[80,11500],[100,11500],[125,11500]],
+  acCable:{ capacities:[0,5,10,15,20,25,30,50,66.6,100,125],
+    rates:[[93,93,93],[93,102,130],[102,130,160],[130,160,192],[160,192,230],[192,230,280],[230,280,340],[280,340,380],[380,389,460],[389,460,552],[552,552,552]],
+    bands:[75,150] },
+  acdbSlabs:{ upTo20:12000, upTo40:18000, upTo100:40000, above:55000 },
+  mpSlabs:{ upTo20:7500, upTo40:10000, upTo100:25000, above:30000, bangaloreFactor:1.75 },
+  enphaseAcdb:[[1,12000],[2,15000],[3,20000],[4,25000],[5,30000],[6,35000],[7,40000],[8,45000],[9,50000],[10,55000]],
+  mms:{
+    cityFactor:{Pune:0.95, Mumbai:1, Bangalore:0.78, Hyderabad:0.96, Delhi:1.1},
+    ballastKgPerKw:{Pune:600, Mumbai:700, Bangalore:550, Hyderabad:600, Delhi:600},
+    heightSlabs:[[10,3.5],[15,3.65],[20,4.0],[25,4.3],[30,4.8],[35,5.3],[40,5.7],[99,6.1]],
+    eightFtAdder:1.0, civilPenetrative:0.35, ballastDensity:2500, fasteners:0.75, transportPct:0.02,
+    metallicShedFlush:1500, metallicTilted:3500
+  },
+  rates:{ dcCablePerM:38.5, dcConnectorPair:80, dcConduitPerM:80, cableTrayPerM:320,
+    inverterStand:7500, acClampPerM:50, accessoriesAcPerKwp:250, earthElectrode:1600,
+    earthStripPerM:52, laConventional:3000, laEse:10500, classCPerKwp:200, wmsLot:60000,
+    waterPipePerM:200, motorSmall:5000, motorBig:10000, walkwayPerM:450, lifelinePerM:250,
+    handrailPerM:650, firstAidPerSystem:3000, ladderPerTower:8400, ceigPerKwp:0,
+    contingencyPerKwp:500, savingsGuar1:500, savingsGuarMulti:750, managerMarginPerKwp:1000,
+    pmcPerKwp:0, financeBasePerKwp:150, transportWhPct:0.022,
+    heightPerFloorFt:5, baseHeightFt:30 },
+  warrantyExt:{ Sungrow:0.25, Growatt:0.12, SolarEdge:0.15, EnphasePerModule:1100 },
+  enphaseKit:{ qCable:550, qTerm:664, fieldWireable:488, termCap:161, envoy:11880,
+    lineFilter:5450, qRelay:5125, rawCablePerM:39, rawCableMPerTerm:40, jb:225, prodCT:1440,
+    modulesPerTermIQ8HC:8, modulesPerTermOther:7 },
+  iandc:{
+    base:{ slabs:[10,30,50,75,125,150,200],
+      Pune:[4000,3000,2500,2500,2250,2000,1800],
+      Mumbai:[4000,3000,2500,2500,2500,2000,2000],
+      Bangalore:[4000,3000,2500,2500,2500,2500,2500] },
+    nonPenAdder:{ slabs:[5,30,50,75,125,150,200],
+      Pune:[1500,1500,1000,1000,1000,500,500],
+      Mumbai:[1500,1500,1000,1000,1000,500,500],
+      Bangalore:[1500,1500,1500,1500,1000,1000,1000] },
+    noLiftUpToFloor15:300, noLiftAbove:500
+  },
+  liasioning:{ slabs:[10,30,75,100,200],
+    MSEDCL:[0.75,0.6,0.5,0.3,0.25], TATA:[0.25,0.25,0.1,0.1,0.1], ADANI:[0.15,0.15,0.15,0.15,0.15],
+    BESCOM:[1,0.75,0.65,0.6,0.5], TSPDCL:[1.25,1,1,0.75,0.7], Delhi:[1.5,1.25,1,1,0.75] },
+  metering:{ smallKwMax:21,
+    rates:{ MSEDCL:[5000,21000,0,0], TATA:[0,5000,0,12000], ADANI:[0,0,0,0],
+      BESCOM:[5000,5000,5000,12000], TSPDCL:[12000,12000,12000,12000], Delhi:[12000,12000,12000,12000] } },
+  amc:{ "No AMC":0, "AMC - Year 1":750, "AMC - Year 2":1250, "AMC - Year 3":1800, "AMC - Year 4":2350, "AMC - Year 5":2500,
+    "CAMC - Year 1":750, "CAMC - Year 2":1250, "CAMC - Year 3":1800, "CAMC - Year 4":2350, "CAMC - Year 5":2500 },
+  meterMerge:{ firstBig:2000, firstSmall:2500, restBig:1500, restSmall:2000, bigAboveKw:20 },
+  margin:{ slabs:[10,20,30,50,75,100,125,150,175,200,250,300,350],
+    Mumbai:[.185,.185,.185,.17,.17,.16,.16,.16,.15,.15,.15,.14,.14],
+    Pune:[.185,.185,.185,.17,.17,.16,.16,.16,.15,.15,.15,.14,.14],
+    Bangalore:[.225,.225,.225,.21,.21,.20,.20,.20,.19,.19,.19,.18,.18],
+    Delhi:[.185,.185,.185,.17,.17,.16,.16,.16,.15,.15,.15,.14,.14],
+    Hyderabad:[.185,.185,.185,.17,.17,.16,.16,.16,.15,.15,.15,.14,.14] },
+  cac:{ dmPerWp:0.0544, fosPerWp:0.2131, salaryPerWp:1.756, incentivePctOfSalary:0.10,
+    loadDm:1.0, loadFos:0.5, loadSalary:0.5, loadIncentive:1.0,
+    deOhPerWp:0.0613, devOhPerWp:0.443 },
+  tax:{ gstEquipment:0.12, gstServices:0.18, blendedGstFactor:1.138 },
+  subsidy:{ perKw:18000, invOversizeFactor:1.2 },
+  misc:{ insuranceBase:4000000, insurancePct:0.005, insuranceRounding:10000,
+    unusualPayPct:0.15, unusualPayMonths:2, unusualPayInterest:0.12 }
+};
+
+const DEFAULT_PROJECT = {
+  name:"Sample High-Rise Project", kwp:69, module:"MPerc Bifacial DCR", brand:"SolarEdge",
+  mmsHeight:"6 ft", floors:22, install:"Penetrative", city:"Mumbai", discom:"ADANI",
+  serviceLift:"Yes", amcType:"CAMC - Year 5", wms:"No", towers:1,
+  channelPartner:"No", channelFee:0, unusualPay:"No", extWarranty:"No",
+  metersIncluded:"No", invStand:"No", savingsGuar:5, payMode:"Capex",
+  infraCost:0, negMargin:0, loadChange:0, handrailM:0,
+  clusters:[
+    {q6:10, q8:0, shed:0, tilt:0, inv:"SE10k", dcdb:"Yes", merge:"No"},
+    {q6:59, q8:0, shed:0, tilt:0, inv:"SE33k", dcdb:"Yes", merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"},
+    {q6:0,q8:0,shed:0,tilt:0,inv:"",dcdb:"Yes",merge:"No"}
+  ]
+};
+
+/* ================= helpers ================= */
+const round=(x,d=0)=>{const f=10**d;return Math.round((x+Number.EPSILON)*f)/f;};
+const ceil=(x,s)=>Math.ceil((x-1e-9)/s)*s;
+function vlookupApprox(x, keys){ // largest key <= x; clamp to first
+  let idx=0; for(let i=0;i<keys.length;i++){ if(keys[i]<=x+1e-9) idx=i; else break; } return idx;
+}
+const fmtIN=n=>{ if(n==null||isNaN(n))return "—";
+  const neg=n<0; n=Math.abs(Math.round(n)); let s=n.toString();
+  if(s.length>3){ let last3=s.slice(-3), rest=s.slice(0,-3);
+    s=rest.replace(/\B(?=(\d{2})+(?!\d))/g,",")+","+last3; }
+  return (neg?"-₹":"₹")+s; };
+const fmtN=(n,d=2)=>(n==null||isNaN(n))?"—":n.toLocaleString("en-IN",{minimumFractionDigits:d,maximumFractionDigits:d});
+
+/* ================================================================
+   CALCULATION ENGINE — pure function, mirrors the Excel formula
+   graph (Master → Backend → Detailed Pricing → Output).
+================================================================ */
+function compute(db, P){
+  const mod = db.modules.find(m=>m.name===P.module) || db.modules[0];
+  const wp = mod.wp;
+  const kwpIn = +P.kwp || 0;                                  // Master!E3
+  const nModules = Math.round(kwpIn/wp*1000);                  // Master!G5
+  const kwpAct = wp*nModules/1000;                             // Master!E4 (=E2)
+  const brand = P.brand;
+  const invList = db.inverters[brand]||[];
+  const heightFt = db.rates.baseHeightFt + (P.floors-5)*db.rates.heightPerFloorFt; // Backend!H2
+  const acRun = heightFt + (heightFt<50?25:50);                // AC cable run per cluster
+
+  /* ---- per-cluster derivation (Master cols P..AF + Backend) ---- */
+  const clusters = P.clusters.map((c,i)=>{
+    const U = (+c.q6||0)+(+c.q8||0)+(+c.shed||0)+(+c.tilt||0); // Master!U
+    const active = U>0;
+    const inv = invList.find(v=>v.sku===c.inv);
+    let invKw=0, invPrice=0;
+    if(active && inv){ invKw = brand==="Enphase" ? 0 : inv.kw; invPrice = inv.price; }
+    const nMod = Math.round(U/wp*1000);                        // Master!AB
+    // optimiser (SolarEdge)
+    let optType=null,optQty=0,optCost=0;
+    if(active && brand==="SolarEdge" && inv){
+      optType = inv.kw>=db.optimisers.s1200ThresholdKw ? "S1200":"B650";
+      optQty = optType==="B650"? Math.round(nMod) : Math.round(nMod/2);
+      optCost = db.optimisers[optType].price*optQty;           // Master!H
+    }
+    // strings (Master!AE) & DC cable (Master!AF — first 2 clusters ×120, rest ×150)
+    let strings=0;
+    if(active){
+      if(brand==="SolarEdge") strings = Math.round(nMod/db.optimisers.stringsPerModules[optType==="S1200"?"S1200":"B650"]);
+      else strings = Math.round(nMod/db.optimisers.stringsPerModules.other);
+    }
+    const dcLen = strings*(i<2?120:150);
+    // envoy (Master!W) — used by Enphase costing
+    const envoy = U>50 ? Math.round(U/50) : (active && U>5 ? 1:0);
+    // DCDB (Master!J) — VLOOKUP approx on inverter kW
+    let dcdb=0;
+    if(active && c.dcdb==="Yes" && brand!=="Enphase" && inv){
+      dcdb = db.dcdbSlabs[vlookupApprox(inv.kw, db.dcdbSlabs.map(r=>r[0]))][1];
+    }
+    // AC cable per cluster (Backend!K34..): rate(cap slab, run band) × run
+    let acCost=0;
+    if(active && brand!=="Enphase" && inv){
+      const band = acRun<db.acCable.bands[0]?0 : acRun<db.acCable.bands[1]?1 : 2;
+      const r = db.acCable.rates[vlookupApprox(inv.kw, db.acCable.capacities)][band];
+      acCost = r*acRun;
+    }
+    // ACDB + metering panel (Backend!K48/L48)
+    let acdb=0, mp=0;
+    if(active && inv && brand!=="Enphase"){
+      const k=inv.kw, a=db.acdbSlabs, m=db.mpSlabs;
+      acdb = k<=20?a.upTo20 : k<=40?a.upTo40 : k<100?a.upTo100 : a.above;
+      mp   = k<=20?m.upTo20 : k<=40?m.upTo40 : k<100?m.upTo100 : m.above;
+    }
+    if(active && brand==="Enphase"){ // Backend!T42.. n-in-1-out ACDB
+      let circ = Math.round(Math.round(Math.round(U/wp*1000)/8)/3);
+      let v=circ<1?1:circ, w=circ<1?0.5:1;
+      const t=db.enphaseAcdb[Math.min(v,10)-1]; acdb=t[1]*w;
+      mp = U<=20?db.mpSlabs.upTo20 : U<=40?db.mpSlabs.upTo40 : U<100?db.mpSlabs.upTo100 : db.mpSlabs.above;
+    }
+    // meter merging (Master!AA — first cluster uses higher slabs)
+    let merge=0;
+    if(c.merge==="Yes"){
+      const mm=db.meterMerge;
+      merge = i===0 ? U*(U>mm.bigAboveKw?mm.firstBig:mm.firstSmall)
+                    : U*(U>mm.bigAboveKw?mm.restBig:mm.restSmall);
+    }
+    return {i, U, active, invSku:c.inv, invKw, invPrice, nMod, optType, optQty, optCost,
+            strings, dcLen, envoy, dcdb, acCost, acdb, mp, merge, q6:+c.q6||0, q8:+c.q8||0,
+            shed:+c.shed||0, tilt:+c.tilt||0};
+  });
+  const act = clusters.filter(c=>c.active);
+  const totU = clusters.reduce((s,c)=>s+c.U,0);
+  const uniqueSystems = act.length;                            // Master!E22
+  const invCapTotal = act.reduce((s,c)=>s+c.invKw,0);          // Master!E23
+  const totStrings = clusters.reduce((s,c)=>s+c.strings,0);
+  const totDcLen = clusters.reduce((s,c)=>s+c.dcLen,0);        // Master!AF16
+  const totEnvoy = clusters.reduce((s,c)=>s+c.envoy,0);        // Master!W16
+  const laCount = Math.max(+P.towers||0, clusters.filter(c=>c.q6>0).length); // DPS!E22
+  const kwpRcc = act.reduce((s,c)=>s+c.q6+c.q8,0);             // Master!Q16+R16
+  const kwpShed = act.reduce((s,c)=>s+c.shed,0);
+  const kwpTilt = act.reduce((s,c)=>s+c.tilt,0);
+
+  /* ---- inverter landed ₹/Wp (Backend!H6..H8) ---- */
+  let enphaseKit=null, invCostPerWp=0;
+  if(brand==="Enphase"){
+    const ek=db.enphaseKit, sku=P.enphaseSku||"IQ8P";
+    const einv=db.inverters.Enphase.find(v=>v.sku===sku)||db.inverters.Enphase[0];
+    const micro=nModules, qc=nModules;
+    const qterm=Math.round(qc/(einv.sku==="IQ8HC"?ek.modulesPerTermIQ8HC:ek.modulesPerTermOther));
+    const circuits=Math.round(qterm/3);
+    const fw=Math.round(nModules/6);
+    const items=[
+      ["Micro-inverter "+einv.sku, micro, einv.price], ["Q Cable", qc, ek.qCable],
+      ["Q Term", qterm, ek.qTerm], ["Field Wireables", fw, ek.fieldWireable],
+      ["Terminal Cap", qterm, ek.termCap], ["Envoy", totEnvoy, ek.envoy],
+      ["Line Filter", totEnvoy, ek.lineFilter], ["Q Relay", circuits, ek.qRelay],
+      ["Raw Cable 1Cx4", qterm*ek.rawCableMPerTerm, ek.rawCablePerM],
+      ["Polycarbonate JB", qterm, ek.jb], ["Production CTs", totEnvoy, ek.prodCT]];
+    const tot=items.reduce((s,r)=>s+r[1]*r[2],0);
+    enphaseKit={items, total:tot};
+    invCostPerWp = tot/kwpAct/1000;
+  } else {
+    const invSum = act.reduce((s,c)=>s+c.invPrice,0);
+    const optSum = act.reduce((s,c)=>s+c.optCost,0);
+    invCostPerWp = (invSum + (brand==="SolarEdge"?optSum:0))/kwpIn/1000;
+  }
+  let extWpW=0;
+  if(P.extWarranty==="Yes"){
+    const w=db.warrantyExt;
+    extWpW = brand==="Enphase" ? w.EnphasePerModule*nModules/kwpAct/1000 : invCostPerWp*(w[brand]||0);
+  }
+  const invLandedPerWp = invCostPerWp + extWpW;                // Backend!H8
+
+  /* ---- MMS ₹/Wp build-up (Backend!K9:K13) ---- */
+  const m=db.mms;
+  const cityF = m.cityFactor[P.city] ?? 1;
+  const hs = m.heightSlabs; let hRate=hs[hs.length-1][1];
+  for(const [maxF,r] of hs){ if(P.floors<=maxF){ hRate=r; break; } }
+  if(P.mmsHeight==="8 ft") hRate += m.eightFtAdder;
+  let mmsEx = cityF*hRate;
+  let civil = P.install==="Penetrative" ? m.civilPenetrative
+            : (m.ballastKgPerKw[P.city]??600)/m.ballastDensity*10;
+  let mmsSub = mmsEx+civil+m.fasteners;
+  let mmsPerWp = mmsSub*(1+m.transportPct);
+  if(wp===560) mmsPerWp = mmsPerWp*0.54/0.56;                  // Backend!L9:L13 correction
+  const mmsRate = mmsPerWp*1000;                               // ₹/kWp
+
+  /* ---- I&C rate (DPS!G32) ---- */
+  const ic=db.iandc, cityKey = (P.city==="Pune"||P.city==="Mumbai")?P.city:"Bangalore";
+  let icRate = ic.base[cityKey][vlookupApprox(kwpAct, ic.base.slabs)];
+  if(P.serviceLift==="No") icRate += (P.floors<=15?ic.noLiftUpToFloor15:ic.noLiftAbove);
+  if(P.install!=="Penetrative") icRate += ic.nonPenAdder[cityKey][vlookupApprox(kwpIn, ic.nonPenAdder.slabs)];
+
+  /* ---- liasioning (Backend!V67) ---- */
+  const li=db.liasioning, liRow = li[P.discom]||li.Delhi;
+  const liRatePerKwp = liRow[vlookupApprox(kwpIn, li.slabs)]*1000/1000*1000; // ₹/Wp table ×1000 → ₹/kWp
+  const netMeterRate = liRow[vlookupApprox(kwpIn, li.slabs)]*1000;
+
+  /* ---- metering cost (Backend!N76) ---- */
+  const nSmall = act.filter(c=>c.invKw>0 && c.invKw<=db.metering.smallKwMax).length;
+  const nBig = uniqueSystems - nSmall;
+  const mr = db.metering.rates[P.discom]||[0,0,0,0];
+  const nmSku2 = P.discom==="BESCOM"? nBig*2 : nBig;
+  const meterCost = nSmall*mr[0] + nBig*mr[1] + nSmall*mr[2] + nmSku2*mr[3];
+
+  /* ---- earthing (DPS!E20/E21, Backend!J65:J67) ---- */
+  let electrodes;
+  if(P.towers===1) electrodes = 4+laCount*2;
+  else if(kwpIn<=5000) electrodes = uniqueSystems>=3 ? uniqueSystems+laCount*2 : 4+laCount*2;
+  else electrodes = 4+laCount*2;
+  const plantEarth = ((heightFt+40)*(Math.max(uniqueSystems,P.towers)>4?2:3)*uniqueSystems
+                     + P.towers*(heightFt+25)*3)/2;            // MEDIAN of two values
+  const laEarth = laCount*(heightFt+20)*2;
+  const earthStripM = Math.round(plantEarth+laEarth);
+  const laType = (kwpAct<=150 && Math.max(P.towers,laCount)<=5) ? "ESE LA" : (kwpAct<=150? "Conventional LA":"ESE LA");
+  const laRate = laType==="Conventional LA"?db.rates.laConventional:db.rates.laEse;
+
+  /* ---- misc quantities ---- */
+  const conduitM = ceil(totDcLen/3,10), trayM = conduitM/5;
+  const connectors = brand==="Enphase"?0:Math.round(totStrings*1.25*2)*2;
+  const dcLenUse = brand==="Enphase"?0:totDcLen;
+  const motors = P.towers;
+  const pipeM = P.towers*(kwpAct>30 ? ceil(kwpAct*0.75/Math.max(motors,1),50) : 30);
+  const motorRate = (pipeM/Math.max(motors,1))>100?db.rates.motorBig:db.rates.motorSmall;
+  const walkM = kwpShed+kwpTilt;
+  const acdbTot = clusters.reduce((s,c)=>s+c.acdb,0);
+  const acdbCnt = clusters.filter(c=>c.acdb>0).length||1;
+  let mpTot = clusters.reduce((s,c)=>s+c.mp,0);
+  if(P.city==="Bangalore") mpTot*=db.mpSlabs.bangaloreFactor;
+  const mpCnt = clusters.filter(c=>c.mp>0).length||1;
+  const dcdbTot = clusters.reduce((s,c)=>s+c.dcdb,0);
+  const acCabTot = clusters.reduce((s,c)=>s+c.acCost,0);
+  const mergeTot = clusters.reduce((s,c)=>s+c.merge,0);
+
+  /* ---- CAC (Margin Profile) ---- */
+  const cc=db.cac;
+  const cacPre = (cc.dmPerWp*cc.loadDm + cc.fosPerWp*cc.loadFos + cc.salaryPerWp*cc.loadSalary
+                + cc.salaryPerWp*cc.incentivePctOfSalary*cc.loadIncentive)*1000; // ₹/kWp
+  const cacDesign = (cc.deOhPerWp+cc.devOhPerWp)*1000;
+
+  const finRate = db.rates.financeBasePerKwp +
+    (P.unusualPay==="Yes" ? db.misc.unusualPayPct*db.misc.unusualPayMonths/12*db.misc.unusualPayInterest*kwpIn*1000 : 0);
+  const sgRate = P.savingsGuar===0?0 : P.savingsGuar===1?db.rates.savingsGuar1 : db.rates.savingsGuarMulti;
+  const amcRate = db.amc[P.amcType] ?? 0;
+  const insQty = P.payMode==="Capex"?0:1;
+  const insRate = ceil(db.misc.insuranceBase*db.misc.insurancePct, db.misc.insuranceRounding);
+
+  /* ---- BoM lines (Detailed Pricing Sheet rows 4..48) ---- */
+  const gE=db.tax.gstEquipment, gS=db.tax.gstServices;
+  const L=[]; let sr=0;
+  const add=(name,cat,uom,qty,rate,gst)=>{ sr++;
+    const total=qty*rate, perWp = total/kwpIn/1000;
+    L.push({sr,name,cat,uom,qty,rate,total,perWp,gst,landed:perWp*(1+gst)}); };
+
+  add("Module — "+mod.name+" ("+wp+" Wp)","MODULE","kWp",kwpAct,mod.rate*1000,gE);
+  add("Inverter — "+brand,"INVERTER","kWp",kwpAct,invLandedPerWp*1000,gE);
+  add("Structure — Metallic sheet (flush)","MMS","kWp",kwpShed,m.metallicShedFlush,gS);
+  add(P.install==="Penetrative"?"Structure — RCC Penetrative":"Structure — RCC Non-Penetrative","MMS","kWp",kwpRcc,mmsRate,gS);
+  add("Structure — Metallic tilted","MMS","kWp",kwpTilt,m.metallicTilted,gS);
+  add("DC cable","ELEC BOS","Mtr",dcLenUse,db.rates.dcCablePerM,gS);
+  add("DC connectors","ELEC BOS","Pairs",connectors,db.rates.dcConnectorPair,gS);
+  add("DC conduits","ELEC BOS","Mtr",conduitM,db.rates.dcConduitPerM,gS);
+  add("DC cable tray","ELEC BOS","Mtr",trayM,db.rates.cableTrayPerM,gS);
+  add("Inverter stand","ELEC BOS","Nos",P.invStand==="Yes"?1:0,db.rates.inverterStand,gS);
+  add("AC cabling","ELEC BOS","Lot",1,acCabTot,gS);
+  add("ACDB","ELEC BOS","Nos",acdbCnt,acdbTot/acdbCnt,gS);
+  add("Metering panel","ELEC BOS","Nos",mpCnt,mpTot/mpCnt,gS);
+  add("DCDB","ELEC BOS","Lot",1,dcdbTot,gS);
+  add("AC cable clamps","ELEC BOS","Mtr",heightFt*P.towers,db.rates.acClampPerM,gS);
+  add("Accessories — AC","ELEC BOS","kWp",kwpAct,db.rates.accessoriesAcPerKwp,gS);
+  add("Earthing electrodes","ELEC BOS","Nos",electrodes,db.rates.earthElectrode,gS);
+  add("Earth strip / earthing cable","ELEC BOS","Mtr",earthStripM,db.rates.earthStripPerM,gS);
+  add(laType,"ELEC BOS","Nos",laCount,laRate,gS);
+  add("Class C items — Mech + Elec","ELEC BOS","kWp",kwpAct,db.rates.classCPerKwp,gS);
+  add("WMS + data logger","ELEC BOS","Lot",P.wms==="Yes"?1:0,db.rates.wmsLot,gS);
+  add("Water pipeline","MECH BOS","Mtr",pipeM,db.rates.waterPipePerM,gS);
+  add("Motor — 2 HP","MECH BOS","Nos",motors,motorRate,gS);
+  add("Walkway","MECH BOS","Mtr",walkM,db.rates.walkwayPerM,gS);
+  add("Safety lifeline","MECH BOS","Mtr",walkM,db.rates.lifelinePerM,gS);
+  add("Handrail","MECH BOS","Mtr",+P.handrailM||0,db.rates.handrailPerM,gS);
+  add("First aid / safety placards / finishing","MECH BOS","Lot",uniqueSystems,db.rates.firstAidPerSystem,gS);
+  add("Meters cost","ELEC BOS","Lot",P.metersIncluded==="Yes"?1:0,meterCost,gS);
+  const iandcIdx=L.length;
+  add("Installation & commissioning","I&C","kWp",kwpAct,icRate,gS);
+  add("CEIG","LIASIONING","kWp",kwpAct,db.rates.ceigPerKwp,gS);
+  add("Net metering","LIASIONING","kWp",kwpAct,netMeterRate,gS);
+  add("PMC overheads","CONTINGENCY","kWp",kwpAct,db.rates.pmcPerKwp,gS);
+  add("Finance cost","CONTINGENCY","kWp",kwpAct,finRate,0);
+  add("AMC — "+P.amcType,"AMC","kWp",kwpAct,amcRate,gS);
+  add("Meter merging","LIASIONING","kWp",kwpAct,mergeTot/Math.max(kwpIn,1e-9),gS);
+  add("Contingency — project level","CONTINGENCY","kWp",kwpAct,db.rates.contingencyPerKwp,gS);
+  add("Savings guarantee contingency","CONTINGENCY","kWp",kwpAct,sgRate,gS);
+  add("CAC — pre-sales","CAC","kWp",kwpAct,cacPre,gS);
+  add("CAC — design","CAC","kWp",kwpAct,cacDesign,gS);
+  add("Manager margin","CAC","kWp",kwpAct,db.rates.managerMarginPerKwp,gS);
+  add("Channel partner cost","CAC","kWp",kwpAct,P.channelPartner==="Yes"?(+P.channelFee||0):0,gS);
+  add("Insurance cost of plant","CAC","Lot",insQty,insRate,gS);
+  add("Exceptional / exclusive cost","MISCELLENEOUS","Lot",1,+P.infraCost||0,gS);
+  add("Ladder for AMC","MECH BOS","Nos",P.towers,db.rates.ladderPerTower,gS);
+  // Manager margin is fixed at ₹1/Wp in the source sheet regardless of qty rounding:
+  const mgr=L.find(l=>l.name==="Manager margin"); mgr.perWp = db.rates.managerMarginPerKwp/1000; mgr.total=mgr.perWp*kwpIn*1000; mgr.landed=mgr.perWp*(1+gS);
+  // Transportation & WH: 1.1 × 2% of supply lines (rows 1..28, i.e. up to Meters cost)
+  const supplyPerWp = L.slice(0, iandcIdx).reduce((s,l)=>s+l.perWp,0);
+  add("Transportation & warehousing","CAC","kWp",kwpAct,db.rates.transportWhPct*supplyPerWp*1000,0);
+
+  /* ---- category rollup & margin stack (DPS!K49..K60, O:P block) ---- */
+  const cats={};
+  for(const l of L){ cats[l.cat]=(cats[l.cat]||0)+l.perWp; }
+  const costPerWp = L.reduce((s,l)=>s+l.perWp,0);              // K49
+  const mg=db.margin, mgRow=mg[P.city]||mg.Mumbai;
+  const marginPct = mgRow[vlookupApprox(kwpIn, mg.slabs)];      // Margin Profile!D1
+  const marginWp = costPerWp*marginPct;                         // K50
+  const negWp = +P.negMargin||0;                                // K51
+  const landedPerWp = costPerWp+marginWp+negWp;                 // K53
+  const landedGstPerWp = landedPerWp*db.tax.blendedGstFactor;   // K54
+  const preGstAbs = landedPerWp*kwpAct*1000;                    // K55
+  const gstAbs = preGstAbs*db.tax.blendedGstFactor;             // K56
+  // subsidy (Master!E24/E25)
+  let subsidyCap;
+  if(P.city==="Bangalore") subsidyCap=kwpIn;
+  else subsidyCap = act.reduce((s,c)=>s+Math.min(c.U, c.invKw*db.subsidy.invOversizeFactor),0);
+  const subsidyAmt = mod.dcr ? subsidyCap*db.subsidy.perKw : 0;
+  const netAbs = gstAbs - subsidyAmt;                           // K58
+  // hardware share for GM (K59: lines up to Meters cost + Ladder)
+  const hwPerWp = supplyPerWp + (L.find(l=>l.name==="Ladder for AMC")?.perWp||0);
+  const gm = 1 - hwPerWp/landedPerWp;
+  const nm = (marginWp+negWp)/landedPerWp;
+  const cogs = (["MODULE","INVERTER","MMS","ELEC BOS","MECH BOS","MISCELLENEOUS"]
+               .reduce((s,k)=>s+(cats[k]||0),0)+marginWp+negWp)/ (landedPerWp) ; // display aid
+  const cogsShare = (["MODULE","INVERTER","MMS","ELEC BOS","MECH BOS","MISCELLENEOUS"]
+               .reduce((s,k)=>s+(cats[k]||0),0))/landedPerWp;
+  // customer-facing split (Master!E33:E39): liasioning +0.2, AMC +0.5 reallocated from basic
+  const liaSplit=(cats["LIASIONING"]||0)+0.2, amcSplit=(cats["AMC"]||0)+0.5;
+  const basicSplit=landedPerWp-liaSplit-amcSplit;
+
+  return { mod, wp, kwpIn, kwpAct, nModules, heightFt, acRun, clusters, act, totU,
+    uniqueSystems, invCapTotal, totStrings, totDcLen, totEnvoy, laCount,
+    kwpRcc, kwpShed, kwpTilt, enphaseKit, invLandedPerWp, mmsPerWp, icRate,
+    lines:L, cats, costPerWp, marginPct, marginWp, negWp, landedPerWp,
+    landedGstPerWp, preGstAbs, gstAbs, subsidyCap, subsidyAmt, netAbs,
+    gm, nm, cogsShare, liaSplit, amcSplit, basicSplit,
+    loadChange:+P.loadChange||0 };
+}
+
+/* ================================================================
+   STATE
+================================================================ */
+const LS_DB="spe_db_v1", LS_PR="spe_proj_v1";
+function loadJSON(k,fb){ try{ const s=localStorage.getItem(k); return s?JSON.parse(s):structuredClone(fb);}catch(e){ return structuredClone(fb);} }
+let DB = loadJSON(LS_DB, DEFAULT_DB);
+let PR = loadJSON(LS_PR, DEFAULT_PROJECT);
+let adminOpen=false;
+function saveDB(){ try{localStorage.setItem(LS_DB,JSON.stringify(DB));}catch(e){} }
+function savePR(){ try{localStorage.setItem(LS_PR,JSON.stringify(PR));}catch(e){} }
+
+/* ================================================================
+   UI
+================================================================ */
+const TABS=[["inputs","Project Inputs"],["clusters","Clusters"],["bom","BoM / Pricing"],["profit","Profit Sheet"],["output","Output"],["admin","Admin"]];
+let tab="inputs";
+const $=s=>document.querySelector(s);
+const el=(t,a={},h="")=>{const e=document.createElement(t);for(const k in a)e.setAttribute(k,a[k]);e.innerHTML=h;return e;};
+
+function renderNav(){
+  const n=$("#nav"); n.innerHTML="";
+  for(const [id,label] of TABS){
+    const b=el("button",{},label); if(id===tab)b.className="on";
+    b.onclick=()=>{tab=id; render();}; n.appendChild(b);
+  }
+}
+function kpis(R){
+  const ic={
+    bolt:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>',
+    rs:'<span style="font-size:15px">₹</span>',
+    doc:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+    trend:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>'};
+  $("#kpis").innerHTML=`
+   <div class="kpi"><div class="ic">${ic.bolt}</div><div><div class="l">Capacity</div><div class="v">${fmtN(R.kwpAct,2)} kWp</div></div></div>
+   <div class="kpi"><div class="ic">${ic.rs}</div><div><div class="l">Landed Cost <span class="mut">(pre-GST)</span></div><div class="v">₹${fmtN(R.landedPerWp,2)}/Wp</div></div></div>
+   <div class="kpi"><div class="ic">${ic.doc}</div><div><div class="l">Project Value <span class="mut">(incl GST)</span></div><div class="v">${fmtIN(R.gstAbs)}</div></div></div>
+   <div class="kpi"><div class="ic">${ic.trend}</div><div><div class="l">Gross Margin</div><div class="v">${fmtN(R.gm*100,2)} %</div></div></div>
+   <div class="kpi"><div class="ic">${ic.trend}</div><div><div class="l">Net Margin</div><div class="v">${fmtN(R.nm*100,2)} %</div></div></div>`;
+  const chev='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+  $("#sb-proj").innerHTML=`${PR.name} <span class="lite">/ ${fmtN(R.kwpAct,1)} kWp</span> ${chev}`;
+  $("#sb-meta").innerHTML=`${PR.city} <span class="lite">· ${PR.discom}</span>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>`;
+  $("#sb-price").innerHTML=`<span class="lite">Net Cost of Power basis</span>&nbsp; ₹${fmtN(R.landedGstPerWp,2)}/Wp incl GST`;
+  $("#sb-price").style.background="var(--blue-soft)"; $("#sb-price").style.borderColor="#c8dcf7"; $("#sb-price").style.color="var(--blue-deep)";
+  $("#sb-proj").onclick=()=>{tab="inputs";render();};
+}
+function bindF(container, obj, key, saveFn, isNum){
+  const i=container.querySelector(`[data-k="${key}"]`);
+  if(!i) return;
+  i.onchange=()=>{ obj[key]= isNum? +i.value : i.value; saveFn(); render(); };
+}
+function sel(k,v,opts,hint=""){
+  return `<div class="f"><label>${k}</label><select data-k="${v.k}">${opts.map(o=>`<option ${o===v.val?"selected":""}>${o}</option>`).join("")}</select>${hint?`<div class="hint">${hint}</div>`:""}</div>`;
+}
+function inp(k,v,hint="",type="number",step="any"){
+  return `<div class="f"><label>${k}</label><input type="${type}" step="${step}" data-k="${v.k}" value="${v.val}">${hint?`<div class="hint">${hint}</div>`:""}</div>`;
+}
+
+/* ---------- TAB: inputs ---------- */
+function vInputs(R){
+  const c=el("div");
+  c.appendChild(el("div",{class:"card"},`
+   <h2>Project definition <span class="tag">Master Sheet inputs</span></h2>
+   <div class="grid g3">
+    ${inp("Project name",{k:"name",val:PR.name},"","text")}
+    ${inp("Input project capacity (kWp)",{k:"kwp",val:PR.kwp},"Actual: "+fmtN(R.kwpAct,2)+" kWp · "+R.nModules+" modules")}
+    ${sel("Module make",{k:"module",val:PR.module},DB.modules.map(m=>m.name),R.mod.dcr?"DCR — subsidy eligible":"Non-DCR — no subsidy")}
+    ${sel("Inverter make",{k:"brand",val:PR.brand},Object.keys(DB.inverters))}
+    ${sel("MMS height",{k:"mmsHeight",val:PR.mmsHeight},["6 ft","8 ft"])}
+    ${inp("No. of floors (G+n)",{k:"floors",val:PR.floors},"Building height: "+R.heightFt+" ft")}
+    ${sel("Installation type",{k:"install",val:PR.install},["Penetrative","Non-Penetrative"])}
+    ${sel("Location",{k:"city",val:PR.city},Object.keys(DB.mms.cityFactor))}
+    ${sel("DISCOM",{k:"discom",val:PR.discom},Object.keys(DB.liasioning).filter(k=>k!=="slabs"))}
+    ${sel("Service lift available",{k:"serviceLift",val:PR.serviceLift},["Yes","No"])}
+    ${sel("Maintenance service",{k:"amcType",val:PR.amcType},Object.keys(DB.amc))}
+    ${sel("Weather monitoring system",{k:"wms",val:PR.wms},["No","Yes"])}
+    ${inp("No. of towers",{k:"towers",val:PR.towers})}
+    ${sel("Channel partner involved",{k:"channelPartner",val:PR.channelPartner},["No","Yes"])}
+    ${inp("Channel partner fee (₹/kWp)",{k:"channelFee",val:PR.channelFee})}
+    ${sel("Unusual payment terms / BG",{k:"unusualPay",val:PR.unusualPay},["No","Yes"])}
+    ${sel("Extended inverter warranty",{k:"extWarranty",val:PR.extWarranty},["No","Yes"])}
+    ${sel("Meters to be included",{k:"metersIncluded",val:PR.metersIncluded},["No","Yes"])}
+    ${sel("Inverter stand required",{k:"invStand",val:PR.invStand},["No","Yes"])}
+    ${sel("Savings guarantee (years)",{k:"savingsGuar",val:PR.savingsGuar},[0,1,5])}
+    ${sel("Mode of payment",{k:"payMode",val:PR.payMode},["Capex","Opex"])}
+    ${inp("Infra cost to add (₹ absolute)",{k:"infraCost",val:PR.infraCost})}
+    ${inp("Negotiation margin (₹/Wp)",{k:"negMargin",val:PR.negMargin})}
+    ${inp("Load change cost (₹, over & above)",{k:"loadChange",val:PR.loadChange})}
+    ${inp("Handrail (Mtr)",{k:"handrailM",val:PR.handrailM})}
+   </div>`));
+  const numeric=["kwp","floors","towers","channelFee","infraCost","negMargin","loadChange","handrailM","savingsGuar"];
+  for(const k of ["name","kwp","module","brand","mmsHeight","floors","install","city","discom","serviceLift","amcType","wms","towers","channelPartner","channelFee","unusualPay","extWarranty","metersIncluded","invStand","savingsGuar","payMode","infraCost","negMargin","loadChange","handrailM"])
+    bindF(c,PR,k,savePR,numeric.includes(k));
+  c.appendChild(el("div",{class:"card noprint"},`
+    <div class="row"><button class="btn" id="resetP">Reset to sample project</button>
+    <span class="mut" style="font-size:12px">Restores the 69 kWp Mumbai reference case used for verification against the Excel.</span></div>`));
+  c.querySelector("#resetP").onclick=()=>{PR=structuredClone(DEFAULT_PROJECT);savePR();render();};
+  return c;
+}
+
+/* ---------- TAB: clusters ---------- */
+function vClusters(R){
+  const c=el("div");
+  const invOpts=DB.inverters[PR.brand].map(v=>v.sku);
+  let rows="";
+  PR.clusters.forEach((cl,i)=>{
+    const d=R.clusters[i];
+    rows+=`<tr>
+      <td class="b">Cl-${i+1}</td>
+      <td><input type="number" step="any" data-c="${i}" data-f="q6" value="${cl.q6}"></td>
+      <td><input type="number" step="any" data-c="${i}" data-f="q8" value="${cl.q8}"></td>
+      <td><input type="number" step="any" data-c="${i}" data-f="shed" value="${cl.shed}"></td>
+      <td><input type="number" step="any" data-c="${i}" data-f="tilt" value="${cl.tilt}"></td>
+      <td class="num b">${fmtN(d.U,1)}</td>
+      <td><select data-c="${i}" data-f="inv"><option value=""></option>${invOpts.map(o=>`<option ${o===cl.inv?"selected":""}>${o}</option>`).join("")}</select></td>
+      <td><select data-c="${i}" data-f="dcdb">${["Yes","No"].map(o=>`<option ${o===cl.dcdb?"selected":""}>${o}</option>`).join("")}</select></td>
+      <td><select data-c="${i}" data-f="merge">${["No","Yes"].map(o=>`<option ${o===cl.merge?"selected":""}>${o}</option>`).join("")}</select></td>
+      <td class="num">${d.nMod}</td>
+      <td>${d.optType||"—"}</td>
+      <td class="num">${d.strings}</td>
+      <td class="num">${fmtIN(d.acCost)}</td>
+      <td class="num">${fmtIN(d.acdb+d.mp)}</td>
+    </tr>`;
+  });
+  c.appendChild(el("div",{class:"card"},`
+   <h2>Cluster configuration <span class="tag">up to 12 clusters — kWp by structure type</span></h2>
+   <div style="overflow-x:auto"><table>
+    <tr><th></th><th class="num">Windpro 6/4 ft (kWp)</th><th class="num">Windpro 8 ft (kWp)</th><th class="num">Metallic shed flush</th><th class="num">Metallic tilted</th><th class="num">Total</th><th>Inverter SKU</th><th>DCDB</th><th>Meter merge</th><th class="num">Modules</th><th>Optimiser</th><th class="num">Strings</th><th class="num">AC cable</th><th class="num">ACDB + MP</th></tr>
+    ${rows}
+    <tr class="tot"><td>Total</td><td class="num">${fmtN(R.clusters.reduce((s,x)=>s+x.q6,0),1)}</td><td class="num">${fmtN(R.clusters.reduce((s,x)=>s+x.q8,0),1)}</td><td class="num">${fmtN(R.kwpShed,1)}</td><td class="num">${fmtN(R.kwpTilt,1)}</td><td class="num">${fmtN(R.totU,1)}</td><td>${fmtN(R.invCapTotal,1)} kW</td><td></td><td></td><td class="num">${R.clusters.reduce((s,x)=>s+x.nMod,0)}</td><td></td><td class="num">${R.totStrings}</td><td class="num">${fmtIN(R.clusters.reduce((s,x)=>s+x.acCost,0))}</td><td class="num">${fmtIN(R.clusters.reduce((s,x)=>s+x.acdb+x.mp,0))}</td></tr>
+   </table></div>
+   ${Math.abs(R.totU-R.kwpIn)>0.01?`<div class="note warnb"><span class="b">Cluster total (${fmtN(R.totU,1)} kWp) ≠ input capacity (${fmtN(R.kwpIn,1)} kWp).</span> Align them — the engine prices per-Wp on input capacity.</div>`:`<div class="note green">Cluster total matches input capacity.</div>`}
+   <div class="note blue">AC run length per cluster: building height ${R.heightFt} ft + riser allowance = ${R.acRun} ft. DC cable: first two clusters × 120 m/string, remaining × 150 (as per source sheet). Envoy count: ${R.totEnvoy}.</div>`));
+  c.querySelectorAll("[data-c]").forEach(i=>{
+    i.onchange=()=>{ const ci=+i.dataset.c,f=i.dataset.f;
+      PR.clusters[ci][f]= (f==="inv"||f==="dcdb"||f==="merge")? i.value : +i.value;
+      savePR(); render(); };
+  });
+  return c;
+}
+
+/* ---------- TAB: BoM ---------- */
+function vBom(R){
+  const c=el("div");
+  let rows="";
+  for(const l of R.lines){
+    if(l.total===0 && l.qty===0) rows+=`<tr style="opacity:.45">`;
+    else rows+=`<tr>`;
+    rows+=`<td>${l.sr}</td><td>${l.name}</td><td><span class="cat">${l.cat}</span></td>
+      <td class="num">${fmtN(l.qty, l.uom==="Nos"||l.uom==="Pairs"||l.uom==="Lot"?0:1)} <span class="mut">${l.uom}</span></td>
+      <td class="num">${fmtN(l.rate,1)}</td><td class="num">${fmtIN(l.total)}</td>
+      <td class="num">${fmtN(l.perWp,3)}</td><td class="num">${(l.gst*100).toFixed(0)}%</td>
+      <td class="num">${fmtN(l.landed,3)}</td></tr>`;
+  }
+  c.appendChild(el("div",{class:"card"},`
+   <h2>Bill of Material — detailed pricing <span class="tag">${R.lines.length} lines · ₹/Wp on input capacity ${fmtN(R.kwpIn,0)} kWp</span></h2>
+   <div style="overflow-x:auto"><table>
+    <tr><th>#</th><th>Particulars</th><th>Category</th><th class="num">Qty</th><th class="num">Rate ₹</th><th class="num">Total ₹</th><th class="num">₹/Wp</th><th class="num">GST</th><th class="num">Landed ₹/Wp</th></tr>
+    ${rows}
+    <tr class="tot"><td></td><td>Total cost to company</td><td></td><td></td><td></td>
+      <td class="num">${fmtIN(R.costPerWp*R.kwpIn*1000)}</td><td class="num">${fmtN(R.costPerWp,3)}</td><td></td><td></td></tr>
+   </table></div>
+   ${R.enphaseKit?`<div class="note"><span class="b">Enphase kit detail:</span> ${R.enphaseKit.items.map(x=>`${x[0]} × ${fmtN(x[1],0)}`).join(" · ")} — total ${fmtIN(R.enphaseKit.total)}</div>`:""}`));
+  return c;
+}
+
+/* ---------- TAB: profit ---------- */
+function vProfit(R){
+  const c=el("div");
+  const catOrder=["MODULE","INVERTER","MMS","ELEC BOS","MECH BOS","LIASIONING","I&C","CONTINGENCY","AMC","CAC","MISCELLENEOUS"];
+  const catRows=catOrder.map(k=>`<tr><td>${k}</td><td class="num">${fmtN(R.cats[k]||0,3)}</td><td class="num">${fmtN((R.cats[k]||0)/R.landedPerWp*100,1)}%</td><td class="num">${fmtIN((R.cats[k]||0)*R.kwpAct*1000)}</td></tr>`).join("");
+  c.appendChild(el("div",{class:"card"},`
+   <h2>Margin stack <span class="tag">Detailed Pricing K49–K60</span></h2>
+   <div style="overflow-x:auto"><table>
+    <tr><th>Particulars</th><th class="num">₹/Wp</th><th class="num">Absolute ₹</th></tr>
+    <tr><td>Total cost to company</td><td class="num">${fmtN(R.costPerWp,3)}</td><td class="num">${fmtIN(R.costPerWp*R.kwpAct*1000)}</td></tr>
+    <tr><td>Company margin @ ${fmtN(R.marginPct*100,1)}% <span class="mut">(city × size matrix)</span></td><td class="num">${fmtN(R.marginWp,3)}</td><td class="num">${fmtIN(R.marginWp*R.kwpAct*1000)}</td></tr>
+    <tr><td>Negotiation margin</td><td class="num">${fmtN(R.negWp,3)}</td><td class="num">${fmtIN(R.negWp*R.kwpAct*1000)}</td></tr>
+    <tr class="sub-t"><td>Total landed cost (pre-GST)</td><td class="num">${fmtN(R.landedPerWp,3)}</td><td class="num">${fmtIN(R.preGstAbs)}</td></tr>
+    <tr><td>Final cost incl GST (blended ×${DB.tax.blendedGstFactor})</td><td class="num">${fmtN(R.landedGstPerWp,3)}</td><td class="num">${fmtIN(R.gstAbs)}</td></tr>
+    <tr><td>Subsidy (${fmtN(R.subsidyCap,2)} kW eligible × ₹${fmtN(DB.subsidy.perKw,0)})</td><td class="num">−${fmtN(R.subsidyAmt/R.kwpAct/1000,3)}</td><td class="num">−${fmtIN(R.subsidyAmt)}</td></tr>
+    <tr class="tot"><td>Final landed cost post subsidy</td><td class="num">${fmtN(R.netAbs/R.kwpAct/1000,3)}</td><td class="num">${fmtIN(R.netAbs)}</td></tr>
+    ${R.loadChange?`<tr><td>Load change (over & above)</td><td></td><td class="num">${fmtIN(R.loadChange)}</td></tr>`:""}
+   </table></div>`));
+  c.appendChild(el("div",{class:"two"},""));
+  const two=c.lastChild;
+  two.appendChild(el("div",{class:"card"},`
+   <h2>Profitability</h2>
+   <div class="grid" style="grid-template-columns:1fr 1fr">
+    <div class="stat orange"><div class="l">Gross Margin</div><div class="big">${fmtN(R.gm*100,2)} %</div></div>
+    <div class="stat blue"><div class="l">Net Margin</div><div class="big">${fmtN(R.nm*100,2)} %</div></div>
+    <div class="stat"><div class="l">COGS Share</div><div class="big">${fmtN(R.cogsShare*100,1)} %</div></div>
+    <div class="stat"><div class="l">Margin ₹ (absolute)</div><div class="big">${fmtIN((R.marginWp+R.negWp)*R.kwpAct*1000)}</div></div>
+   </div>
+   <div class="note">Customer-facing split (as on Master Sheet): Solar basic ${fmtN(R.basicSplit,2)} ₹/Wp · Liasioning ${fmtN(R.liaSplit,2)} · AMC ${fmtN(R.amcSplit,2)} (0.2 and 0.5 ₹/Wp reallocated from basic).</div>`));
+  const maxCat=Math.max(...catOrder.map(k=>R.cats[k]||0), R.marginWp+R.negWp, 0.001);
+  const barsH = catOrder.concat(["MARGIN"]).map(k=>{
+    const v = k==="MARGIN" ? R.marginWp+R.negWp : (R.cats[k]||0);
+    const h = Math.max(3, v/maxCat*150);
+    return `<div class="barwrap"><div class="bv">${fmtN(v,1)}</div><div class="bar ${v<0.005?"ghost":""}" style="height:${h}px"></div><div class="bl">${k==="MISCELLENEOUS"?"MISC":k}</div></div>`;
+  }).join("");
+  two.appendChild(el("div",{class:"card"},`
+   <h2>Category Mix <span class="tag">₹/Wp of landed</span></h2>
+   <div class="bars">${barsH}</div>
+   <div style="overflow-x:auto;margin-top:14px"><table>
+    <tr><th>Category</th><th class="num">₹/Wp</th><th class="num">% of landed</th><th class="num">Absolute</th></tr>
+    ${catRows}
+    <tr><td>MARGIN</td><td class="num">${fmtN(R.marginWp+R.negWp,3)}</td><td class="num">${fmtN(R.nm*100,1)}%</td><td class="num">${fmtIN((R.marginWp+R.negWp)*R.kwpAct*1000)}</td></tr>
+    <tr class="tot"><td>Total</td><td class="num">${fmtN(R.landedPerWp,3)}</td><td class="num">100%</td><td class="num">${fmtIN(R.preGstAbs)}</td></tr>
+   </table></div>`));
+  return c;
+}
+
+/* ---------- TAB: output ---------- */
+function vOutput(R){
+  const c=el("div");
+  const catOrder=["MODULE","INVERTER","MMS","ELEC BOS","MECH BOS","LIASIONING","I&C","CONTINGENCY","AMC","CAC","MISCELLENEOUS"];
+  const rows=catOrder.map(k=>`<tr><td>${k}</td><td class="num">${fmtN(R.cats[k]||0,3)}</td><td class="num">${fmtIN((R.cats[k]||0)*R.kwpAct*1000)}</td></tr>`).join("");
+  c.appendChild(el("div",{class:"card"},`
+   <h2>Output Sheet — Projects Team Deliverable
+     <span class="tag blue">${PR.name}</span>
+     <button class="btn pri sm noprint" style="margin-left:auto" onclick="window.print()">Download Report</button></h2>
+   <div class="print-only" style="margin-bottom:12px"><span class="b">${PR.name}</span> · ${fmtN(R.kwpAct,2)} kWp · ${PR.city} · ${PR.discom} · ${new Date().toLocaleDateString("en-IN")}</div>
+   <div style="overflow-x:auto"><table>
+    <tr><th>Header</th><th class="num">Cost ₹/Wp</th><th class="num">Cost ₹ (absolute)</th></tr>
+    ${rows}
+    <tr class="sub-t"><td>MARGIN</td><td class="num">${fmtN(R.marginWp+R.negWp,3)}</td><td class="num">${fmtIN((R.marginWp+R.negWp)*R.kwpAct*1000)}</td></tr>
+    <tr class="tot"><td>Total (pre-GST)</td><td class="num">${fmtN(R.landedPerWp,3)}</td><td class="num">${fmtIN(R.preGstAbs)}</td></tr>
+    <tr><td>COGS</td><td class="num">${fmtN(R.cogsShare*100,1)}%</td><td></td></tr>
+    <tr><td>Gross margin</td><td class="num">${fmtN(R.gm*100,1)}%</td><td></td></tr>
+    <tr><td>CM1 / net margin</td><td class="num">${fmtN(R.nm*100,1)}%</td><td></td></tr>
+   </table></div>
+   <div class="note">System: ${PR.brand} · ${R.mod.name} ${R.wp} Wp × ${R.nModules} modules · ${R.uniqueSystems} inverter system(s), ${fmtN(R.invCapTotal,1)} kW AC · Building G+${PR.floors} (${R.heightFt} ft) · ${PR.install} · Subsidy ${R.mod.dcr?fmtIN(R.subsidyAmt):"not applicable"}.</div>`));
+  return c;
+}
+
+/* ---------- TAB: admin ---------- */
+function grid(title, rows, cols, onEdit, extra=""){
+  // rows: array of objects; cols: [{k,label,type}]
+  let h=`<div class="card"><h2>${title}</h2><div style="overflow-x:auto"><table><tr>${cols.map(c=>`<th${c.type==="n"?' class="num"':""}>${c.label}</th>`).join("")}</tr>`;
+  rows.forEach((r,ri)=>{
+    h+="<tr>"+cols.map(c=>{
+      const v=r[c.k];
+      if(c.ro) return `<td>${v}</td>`;
+      return `<td><input data-g="${title}" data-r="${ri}" data-k="${c.k}" data-t="${c.type||"n"}" value="${v}" style="min-width:70px"></td>`;
+    }).join("")+"</tr>";
+  });
+  h+=`</table></div>${extra}</div>`;
+  return h;
+}
+function vAdmin(){
+  const c=el("div");
+  if(!adminOpen){
+    c.appendChild(el("div",{class:"card",id:"lock"},`
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--blue-soft);display:flex;align-items:center;justify-content:center;margin:6px auto 16px">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2f6fed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      </div>
+      <h2 style="justify-content:center">Admin Access</h2>
+      <p class="mut" style="margin-bottom:16px">The rate database (prices, slabs, margins, CAC) is passcode-protected.</p>
+      <div class="row" style="justify-content:center">
+        <input id="pc" type="password" placeholder="Passcode" style="padding:10px 14px;border:1px solid #d9dde3;border-radius:999px;font-family:inherit;font-weight:600">
+        <button class="btn pri" id="go">Unlock</button></div>
+      <p class="mut" style="margin-top:12px;font-size:12px">Default: admin@123 — change it in Admin → System after first login.</p>`));
+    c.querySelector("#go").onclick=()=>{ if($("#pc").value===DB.meta.passcode){adminOpen=true;render();} else alert("Incorrect passcode."); };
+    return c;
+  }
+  const w=el("div");
+  w.appendChild(el("div",{class:"card noprint"},`
+   <div class="row">
+    <button class="btn pri" id="exp">Export database (.json)</button>
+    <label class="btn">Import database <input id="imp" type="file" accept=".json" style="display:none"></label>
+    <button class="btn" id="rst">Reset to Feb'25 defaults</button>
+    <button class="btn" id="lck">Lock admin</button>
+    <span class="mut" style="font-size:12px">DB v${DB.meta.version} · updated ${DB.meta.updated}. Edits save automatically to this browser; export the JSON to distribute a rate revision to the team.</span>
+   </div>`));
+  // Modules
+  w.insertAdjacentHTML("beforeend", grid("Modules", DB.modules,
+    [{k:"name",label:"Name",type:"s"},{k:"wp",label:"Wattage"},{k:"rate",label:"₹/Wp ex-works"},{k:"dcr",label:"DCR (true/false)",type:"b"}]));
+  // Inverters
+  for(const b of Object.keys(DB.inverters))
+    w.insertAdjacentHTML("beforeend", grid("Inverters — "+b, DB.inverters[b],
+      [{k:"sku",label:"SKU",type:"s"},{k:"kw",label:"kW"},{k:"price",label:"Price ₹"}]));
+  // Simple key-value groups
+  const kv=(title,obj,pathNote="")=>{
+    const rows=Object.entries(obj).filter(([k,v])=>typeof v!=="object").map(([k,v])=>({key:k,val:v}));
+    return grid(title, rows, [{k:"key",label:"Parameter",ro:true},{k:"val",label:"Value"}], null, pathNote?`<div class="note">${pathNote}</div>`:"");
+  };
+  w.insertAdjacentHTML("beforeend", kv("Optimisers & strings", {B650_price:DB.optimisers.B650.price, S1200_price:DB.optimisers.S1200.price, S1200_threshold_kW:DB.optimisers.s1200ThresholdKw, strings_modules_B650:DB.optimisers.stringsPerModules.B650, strings_modules_S1200:DB.optimisers.stringsPerModules.S1200, strings_modules_other:DB.optimisers.stringsPerModules.other}));
+  w.insertAdjacentHTML("beforeend", grid("DCDB slabs (by inverter kW)", DB.dcdbSlabs.map(r=>({upToKw:r[0],price:r[1]})),
+    [{k:"upToKw",label:"kW key"},{k:"price",label:"Price ₹"}]));
+  w.insertAdjacentHTML("beforeend", grid("AC cable rate matrix (₹/m × run band)", DB.acCable.capacities.map((cp,i)=>({cap:cp, lt75:DB.acCable.rates[i][0], b75_150:DB.acCable.rates[i][1], gt150:DB.acCable.rates[i][2]})),
+    [{k:"cap",label:"Inverter kW"},{k:"lt75",label:"< 75 ft"},{k:"b75_150",label:"75–150 ft"},{k:"gt150",label:"> 150 ft"}]));
+  w.insertAdjacentHTML("beforeend", kv("ACDB slabs ₹", DB.acdbSlabs));
+  w.insertAdjacentHTML("beforeend", kv("Metering panel slabs ₹", DB.mpSlabs));
+  w.insertAdjacentHTML("beforeend", grid("MMS height slabs (₹/Wp, 6 ft; 8 ft = +adder)", DB.mms.heightSlabs.map(r=>({uptoFloors:r[0],rate:r[1]})),
+    [{k:"uptoFloors",label:"Up to G+"},{k:"rate",label:"₹/Wp"}]));
+  w.insertAdjacentHTML("beforeend", kv("MMS parameters", {eightFtAdder:DB.mms.eightFtAdder, civilPenetrative:DB.mms.civilPenetrative, ballastDensity:DB.mms.ballastDensity, fasteners:DB.mms.fasteners, transportPct:DB.mms.transportPct, metallicShedFlush:DB.mms.metallicShedFlush, metallicTilted:DB.mms.metallicTilted}));
+  w.insertAdjacentHTML("beforeend", grid("City factors", Object.keys(DB.mms.cityFactor).map(k=>({city:k, mmsFactor:DB.mms.cityFactor[k], ballastKgPerKw:DB.mms.ballastKgPerKw[k]||600})),
+    [{k:"city",label:"City",ro:true},{k:"mmsFactor",label:"MMS factor"},{k:"ballastKgPerKw",label:"Ballast kg/kW"}]));
+  w.insertAdjacentHTML("beforeend", grid("I&C base ₹/kWp (capacity slabs)", DB.iandc.base.slabs.map((s,i)=>({slab:s,Pune:DB.iandc.base.Pune[i],Mumbai:DB.iandc.base.Mumbai[i],Bangalore:DB.iandc.base.Bangalore[i]})),
+    [{k:"slab",label:"From kWp"},{k:"Pune",label:"Pune"},{k:"Mumbai",label:"Mumbai"},{k:"Bangalore",label:"Bengaluru/other"}]));
+  w.insertAdjacentHTML("beforeend", grid("I&C non-penetrative adder ₹/kWp", DB.iandc.nonPenAdder.slabs.map((s,i)=>({slab:s,Pune:DB.iandc.nonPenAdder.Pune[i],Mumbai:DB.iandc.nonPenAdder.Mumbai[i],Bangalore:DB.iandc.nonPenAdder.Bangalore[i]})),
+    [{k:"slab",label:"From kWp"},{k:"Pune",label:"Pune"},{k:"Mumbai",label:"Mumbai"},{k:"Bangalore",label:"Bengaluru/other"}]));
+  w.insertAdjacentHTML("beforeend", grid("Liasioning ₹/Wp (DISCOM × capacity slab)", Object.keys(DB.liasioning).filter(k=>k!=="slabs").map(d=>{
+      const o={discom:d}; DB.liasioning.slabs.forEach((s,i)=>o["s"+s]=DB.liasioning[d][i]); return o; }),
+    [{k:"discom",label:"DISCOM",ro:true},...DB.liasioning.slabs.map(s=>({k:"s"+s,label:"≥"+s+" kWp"}))]));
+  w.insertAdjacentHTML("beforeend", grid("Metering rates ₹ (SGM small / SGM big / NM small / NM big)", Object.keys(DB.metering.rates).map(d=>({discom:d, sgmS:DB.metering.rates[d][0], sgmB:DB.metering.rates[d][1], nmS:DB.metering.rates[d][2], nmB:DB.metering.rates[d][3]})),
+    [{k:"discom",label:"DISCOM",ro:true},{k:"sgmS",label:"SGM ≤21 kW"},{k:"sgmB",label:"SGM >21 kW"},{k:"nmS",label:"NM ≤21 kW"},{k:"nmB",label:"NM >21 kW"}]));
+  w.insertAdjacentHTML("beforeend", grid("AMC / CAMC ₹/kWp", Object.keys(DB.amc).map(k=>({type:k,rate:DB.amc[k]})),
+    [{k:"type",label:"Type",ro:true},{k:"rate",label:"₹/kWp"}]));
+  w.insertAdjacentHTML("beforeend", grid("Margin matrix (net margin fraction by city × kWp)", DB.margin.slabs.map((s,i)=>({slab:s,Mumbai:DB.margin.Mumbai[i],Pune:DB.margin.Pune[i],Bangalore:DB.margin.Bangalore[i],Delhi:DB.margin.Delhi[i],Hyderabad:DB.margin.Hyderabad[i]})),
+    [{k:"slab",label:"From kWp"},{k:"Mumbai",label:"Mumbai"},{k:"Pune",label:"Pune"},{k:"Bangalore",label:"Bengaluru"},{k:"Delhi",label:"Delhi"},{k:"Hyderabad",label:"Hyderabad"}]));
+  w.insertAdjacentHTML("beforeend", kv("CAC parameters (₹/Wp & loading factors)", DB.cac,
+    "Pre-sales CAC = DM×load + FOS×load + Salary×load + (Salary × incentive%)×load. Design CAC = DE O/H + DEV O/H. All ₹/Wp."));
+  w.insertAdjacentHTML("beforeend", kv("Unit rates (₹)", DB.rates));
+  w.insertAdjacentHTML("beforeend", kv("Warranty extension factors", DB.warrantyExt));
+  w.insertAdjacentHTML("beforeend", kv("Enphase kit rates ₹", DB.enphaseKit));
+  w.insertAdjacentHTML("beforeend", kv("Meter merging ₹/kW", DB.meterMerge));
+  w.insertAdjacentHTML("beforeend", kv("Tax", DB.tax));
+  w.insertAdjacentHTML("beforeend", kv("Subsidy", DB.subsidy));
+  w.insertAdjacentHTML("beforeend", kv("Misc / finance / insurance", DB.misc));
+  w.insertAdjacentHTML("beforeend", kv("System (passcode, version)", DB.meta));
+
+  /* wire edits back into DB by grid title */
+  const apply=(title,ri,k,val)=>{
+    const num=v=>isNaN(+v)||v===""?v:+v;
+    switch(true){
+      case title==="Modules": DB.modules[ri][k]= k==="name"?val : k==="dcr" ? (val==="true"||val===true) : +val; break;
+      case title.startsWith("Inverters — "): { const b=title.slice(12); DB.inverters[b][ri][k]= k==="sku"?val:+val; break; }
+      case title==="Optimisers & strings": { const map={B650_price:["optimisers","B650","price"],S1200_price:["optimisers","S1200","price"],S1200_threshold_kW:["optimisers","s1200ThresholdKw"],strings_modules_B650:["optimisers","stringsPerModules","B650"],strings_modules_S1200:["optimisers","stringsPerModules","S1200"],strings_modules_other:["optimisers","stringsPerModules","other"]};
+        const p=map[valKey]; let o=DB; for(let i=0;i<p.length-1;i++)o=o[p[i]]; o[p[p.length-1]]=+val; break; }
+      case title.startsWith("DCDB slabs"): DB.dcdbSlabs[ri][k==="upToKw"?0:1]=+val; break;
+      case title.startsWith("AC cable rate"): { if(k==="cap")DB.acCable.capacities[ri]=+val; else DB.acCable.rates[ri][{lt75:0,b75_150:1,gt150:2}[k]]=+val; break; }
+      case title.startsWith("ACDB slabs"): DB.acdbSlabs[valKey]=+val; break;
+      case title.startsWith("Metering panel slabs"): DB.mpSlabs[valKey]=+val; break;
+      case title.startsWith("MMS height"): DB.mms.heightSlabs[ri][k==="uptoFloors"?0:1]=+val; break;
+      case title==="MMS parameters": DB.mms[valKey]=+val; break;
+      case title==="City factors": { const city=DB.margin&&Object.keys(DB.mms.cityFactor)[ri]; if(k==="mmsFactor")DB.mms.cityFactor[city]=+val; else DB.mms.ballastKgPerKw[city]=+val; break; }
+      case title.startsWith("I&C base"): { if(k==="slab")DB.iandc.base.slabs[ri]=+val; else DB.iandc.base[k][ri]=+val; break; }
+      case title.startsWith("I&C non-pen"): { if(k==="slab")DB.iandc.nonPenAdder.slabs[ri]=+val; else DB.iandc.nonPenAdder[k][ri]=+val; break; }
+      case title.startsWith("Liasioning"): { const d=Object.keys(DB.liasioning).filter(x=>x!=="slabs")[ri]; const si=DB.liasioning.slabs.indexOf(+k.slice(1)); DB.liasioning[d][si]=+val; break; }
+      case title.startsWith("Metering rates"): { const d=Object.keys(DB.metering.rates)[ri]; DB.metering.rates[d][{sgmS:0,sgmB:1,nmS:2,nmB:3}[k]]=+val; break; }
+      case title.startsWith("AMC / CAMC"): { const t=Object.keys(DB.amc)[ri]; DB.amc[t]=+val; break; }
+      case title.startsWith("Margin matrix"): { if(k==="slab")DB.margin.slabs[ri]=+val; else DB.margin[k][ri]=+val; break; }
+      case title.startsWith("CAC parameters"): DB.cac[valKey]=+val; break;
+      case title==="Unit rates (₹)": DB.rates[valKey]=+val; break;
+      case title.startsWith("Warranty"): DB.warrantyExt[valKey]=+val; break;
+      case title.startsWith("Enphase kit"): DB.enphaseKit[valKey]=+val; break;
+      case title.startsWith("Meter merging"): DB.meterMerge[valKey]=+val; break;
+      case title==="Tax": DB.tax[valKey]=+val; break;
+      case title==="Subsidy": DB.subsidy[valKey]=+val; break;
+      case title.startsWith("Misc"): DB.misc[valKey]=+val; break;
+      case title.startsWith("System"): DB.meta[valKey]= valKey==="passcode"||valKey==="version"||valKey==="updated" ? val : val; break;
+    }
+  };
+  let valKey=null;
+  w.querySelectorAll("input[data-g]").forEach(i=>{
+    i.onchange=()=>{ valKey = i.closest("tr").querySelector("td")?.textContent?.trim();
+      // for kv grids first cell is the parameter name; for others use data-k
+      apply(i.dataset.g, +i.dataset.r, i.dataset.k, i.value);
+      saveDB(); render(); };
+  });
+  w.querySelector("#exp").onclick=()=>{
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,2)],{type:"application/json"}));
+    a.download="pricing-database-"+new Date().toISOString().slice(0,10)+".json"; a.click(); };
+  w.querySelector("#imp").onchange=e=>{
+    const f=e.target.files[0]; if(!f)return;
+    const r=new FileReader(); r.onload=()=>{ try{ DB=JSON.parse(r.result); saveDB(); render(); alert("Database imported."); }catch(err){ alert("Invalid JSON file."); } }; r.readAsText(f); };
+  w.querySelector("#rst").onclick=()=>{ if(confirm("Reset all rates to the Feb'25 workbook defaults?")){ DB=structuredClone(DEFAULT_DB); saveDB(); render(); } };
+  w.querySelector("#lck").onclick=()=>{ adminOpen=false; render(); };
+  return w;
+}
+
+/* ---------- root render ---------- */
+function render(){
+  const R=compute(DB,PR);
+  renderNav(); kpis(R);
+  const m=$("#main"); m.innerHTML="";
+  m.appendChild(tab==="inputs"?vInputs(R): tab==="clusters"?vClusters(R):
+    tab==="bom"?vBom(R): tab==="profit"?vProfit(R): tab==="output"?vOutput(R): vAdmin());
+}
+render();
+</script>
+</body>
+</html>
