@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UnityESS Project Tracker</title>
+<link rel="icon" href="project-tracker-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#12606B; --brand-2:#0E4C55; --brand-soft:#E6F0F1;
+  --ink:#1B1F23; --muted:#5F6B73; --line:#DDE3E6; --bg:#F5F7F8; --card:#FFFFFF;
+  --ok:#1E7B46; --ok-soft:#E3F3E9; --bad:#B42318; --bad-soft:#FDECEA; --warn:#B54708; --warn-soft:#FEF0C7;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Chivo,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg);font-size:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+
+/* Header */
+header{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.hwrap{max-width:1600px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{height:30px;display:block}
+.title{font-weight:700;font-size:18px;padding-left:16px;border-left:1px solid var(--line)}
+.spacer{flex:1}
+.updated{font-size:12px;color:var(--muted);text-align:right;line-height:1.4}
+.updated b{color:var(--ink);font-weight:600}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+.btn.primary:hover{background:var(--brand-2);color:#fff}
+.btn.primary.dirty{box-shadow:0 0 0 3px #F5B54A}
+.btn.danger{color:var(--bad)}
+.btn.danger:hover{border-color:var(--bad);background:var(--bad-soft)}
+.btn.sm{padding:4px 8px;font-size:12px;border-radius:6px}
+.iconbtn{border:none;background:none;cursor:pointer;color:var(--muted);font-size:16px;padding:2px 6px;border-radius:6px;line-height:1}
+.iconbtn:hover{background:var(--bad-soft);color:var(--bad)}
+.save-state{font-size:12px;color:var(--muted)}
+.save-state.dirty{color:var(--warn);font-weight:600}
+
+/* Tabs */
+.tabs{max-width:1600px;margin:0 auto;padding:0 16px;display:flex;gap:4px}
+.tab{border:none;background:none;padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;font-weight:600;color:var(--muted)}
+.tab.active{color:var(--brand);border-bottom-color:var(--brand)}
+.tab .count{display:inline-block;background:var(--brand-soft);color:var(--brand);border-radius:10px;padding:0 7px;font-size:11px;margin-left:4px}
+
+main{max-width:1600px;margin:0 auto;padding:16px}
+.banner{display:none;background:var(--warn-soft);color:var(--warn);border:1px solid #F5D48A;border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.banner.show{display:block}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.search{border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:220px;background:var(--card)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.scroll{overflow-x:auto}
+h2{font-size:15px;margin:22px 0 8px}
+
+/* Tables */
+table{border-collapse:collapse;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:0;vertical-align:top;text-align:left}
+th{background:var(--brand);color:#fff;font-weight:600;font-size:12px;padding:8px;white-space:nowrap;position:relative}
+th.num,td.num{text-align:center}
+tbody tr:hover td{background:#FAFCFC}
+td .cell{width:100%;border:1px solid transparent;background:transparent;padding:7px 8px;border-radius:4px;outline:none;min-height:32px}
+td .cell:hover{border-color:var(--line)}
+td .cell:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 2px var(--brand-soft)}
+td textarea.cell{resize:vertical;min-width:260px;line-height:1.35;display:block;overflow:hidden}
+td input.num{text-align:center;width:64px}
+td.sr{color:var(--muted);text-align:center;padding:8px;width:40px}
+td.act{white-space:nowrap;padding:5px 6px}
+td.ro{padding:8px;font-weight:600}
+.w-site{min-width:130px}.w-name{min-width:170px}.w-cap{min-width:85px}.w-stage{width:64px;text-align:center}
+input[list]::-webkit-calendar-picker-indicator{display:none!important}.w-date{min-width:84px}.w-sku{min-width:170px}
+.status{width:34px;height:30px;margin:2px 4px;border-radius:6px;border:1px solid var(--line);cursor:pointer;font-weight:700;font-size:15px}
+.status.ok{background:var(--ok-soft);color:var(--ok);border-color:#A6D8B8}
+.status.no{background:var(--bad-soft);color:var(--bad);border-color:#F3B4AE}
+.stage.ok{color:var(--ok);font-weight:700}.stage.no{color:var(--bad);font-weight:700}
+.completed-table td{color:var(--muted)}
+details summary{cursor:pointer;font-weight:700;font-size:15px;margin:22px 0 8px}
+.empty{padding:18px;color:var(--muted);text-align:center}
+
+/* Inventory */
+.th-proj{display:flex;align-items:center;gap:4px;justify-content:center}
+.th-proj .iconbtn{color:#CFE3E6;font-size:13px}
+.th-proj .iconbtn:hover{background:rgba(255,255,255,.15);color:#fff}
+th.done{background:#7C8B91}
+td.done input{color:var(--muted)}
+.surplus{font-weight:700;padding:8px;text-align:center}
+.surplus.neg{color:var(--bad);background:var(--bad-soft)}
+.surplus.zero{color:var(--muted)}
+.surplus.pos{color:var(--ok)}
+tfoot td{background:var(--brand-soft);font-weight:700;padding:8px}
+.legend{font-size:12px;color:var(--muted);margin-top:8px}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(15,25,30,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:12px;max-width:520px;width:100%;padding:20px;max-height:90vh;overflow:auto}
+.modal h3{margin:0 0 6px;font-size:17px}
+.modal p{color:var(--muted);margin:4px 0 12px;line-height:1.45}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.field input,.field select{border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap}
+.hint{font-size:12px;color:var(--muted);line-height:1.45}
+.hint code{background:var(--bg);padding:1px 4px;border-radius:4px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60;max-width:90vw}
+.toast.show{opacity:1}
+.toast.err{background:var(--bad)}
+
+@media (max-width:700px){
+  .title{border-left:none;padding-left:0;font-size:16px}
+  .updated{text-align:left;width:100%}
+  .search{min-width:0;flex:1}
+  .row2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <img class="logo" src="project-tracker-logo.png" alt="UnityESS">
+    <div class="title">Upcoming Projects</div>
+    <div class="spacer"></div>
+    <div class="updated" id="updated">Loading…</div>
+    <span class="save-state" id="saveState"></span>
+    <button class="btn" id="settingsBtn" title="Connection settings">Settings</button>
+    <button class="btn primary" id="saveBtn">Save</button>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="projects">Projects <span class="count" id="cntProjects">0</span></button>
+    <button class="tab" data-tab="inventory">Inventory <span class="count" id="cntInventory">0</span></button>
+  </nav>
+</header>
+
+<main>
+  <div class="banner" id="banner"></div>
+
+  <!-- PROJECTS -->
+  <section id="tab-projects">
+    <div class="toolbar">
+      <input class="search" id="search" placeholder="Search projects, sites, SKUs, notes…">
+      <button class="btn primary" id="addProject">+ Add project</button>
+      <button class="btn" id="csvProjects">Export CSV</button>
+    </div>
+    <div class="card scroll">
+      <table id="projTable">
+        <thead><tr>
+          <th class="num">Sr.</th><th class="num">Status</th><th>Customer / Site</th><th>Closed on</th><th>Project / Requirement</th><th>Capacity</th>
+          <th class="num">HOTO</th><th class="num">Tech Diligence</th><th class="num">Supply</th><th class="num">Installation</th><th class="num">Commissioning</th>
+          <th>SKU</th><th>Notes / Uncertainty</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="legend">Click the Status button to switch between ✓ and ✗. Stage cells take ✓, ✗ or initials (e.g. KB). Changes are kept only after you press <b>Save</b>.</div>
+
+    <details id="completedBox">
+      <summary>Completed projects (<span id="cntDone">0</span>)</summary>
+      <div class="card scroll">
+        <table id="doneTable" class="completed-table">
+          <thead><tr>
+            <th class="num">Sr.</th><th class="num">Status</th><th>Customer / Site</th><th>Closed on</th><th>Project / Requirement</th><th>Capacity</th>
+            <th class="num">HOTO</th><th class="num">Tech Diligence</th><th class="num">Supply</th><th class="num">Installation</th><th class="num">Commissioning</th>
+            <th>SKU</th><th>Notes / Uncertainty</th><th>Completed on</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <!-- INVENTORY -->
+  <section id="tab-inventory" hidden>
+    <div class="toolbar">
+      <button class="btn primary" id="addSku">+ Add inventory (SKU)</button>
+      <select class="search" id="addColSel" style="min-width:200px"></select>
+      <button class="btn" id="addColBtn">+ Allocate to project</button>
+      <button class="btn" id="csvInventory">Export CSV</button>
+    </div>
+    <div class="card scroll">
+      <table id="invTable"><thead></thead><tbody></tbody><tfoot></tfoot></table>
+    </div>
+    <div class="legend">Enter how many units of each SKU go to each project. <b>Surplus = Stock − total allocated</b>, worked out automatically; red means you've allocated more than you have. Remove a SKU with ✕ once it's used up. Grey columns are completed projects.</div>
+  </section>
+</main>
+
+<!-- Generic modal -->
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<datalist id="stageOpts"><option value="✓"><option value="✗"><option value="KB"><option value="FB"><option value="SK"></datalist>
+
+<script>
+const DEFAULT_DATA = {"meta": {"updatedAt": "2026-10-07T11:40:49.000Z", "updatedBy": "Imported from Excel"}, "projects": [{"id": "p1", "status": "✓", "site": "Phalodi, RJ", "closedOn": "", "name": "Padams", "capacity": "35MWh", "hoto": "✓", "diligence": "✓", "supply": "", "installation": "✓", "commissioning": "", "sku": "5160S (x7)", "notes": "With 7x Hopewind 2.5MW Central PCS, Cold commision have been done for four units.T/F and HT panel not charged yet. (7 oct)", "completed": false, "completedOn": ""}, {"id": "p2", "status": "✓", "site": "Mundsar, RJ", "closedOn": "", "name": "Sunsure Energy (1)", "capacity": "2.5 MW", "hoto": "✓", "diligence": "✓", "supply": "✓", "installation": "", "commissioning": "", "sku": "PCS", "notes": "Installation is pending. (7 oct)", "completed": false, "completedOn": ""}, {"id": "p3", "status": "✓", "site": "Mundsar, RJ", "closedOn": "", "name": "Sunsure Energy (2)", "capacity": "836kWh", "hoto": "✓", "diligence": "✓", "supply": "✓", "installation": "✓", "commissioning": "✓", "sku": "418H (2x)", "notes": "SCADA integration is pending. (7 oct)", "completed": false, "completedOn": ""}, {"id": "p4", "status": "✓", "site": "Pratapgarh, RJ", "closedOn": "", "name": "Kalpa Power (1)", "capacity": "1672kWh", "hoto": "KB", "diligence": "", "supply": "", "installation": "", "commissioning": "", "sku": "418 W or H?", "notes": "Need to understand with POC", "completed": false, "completedOn": ""}, {"id": "p5", "status": "✓", "site": "Shehlke, RJ", "closedOn": "", "name": "Gridfree Energy", "capacity": "2.508MWh", "hoto": "FB", "diligence": "", "supply": "", "installation": "", "commissioning": "", "sku": "418kWh - WG", "notes": "COD (07.12.26)", "completed": false, "completedOn": ""}, {"id": "p6", "status": "✓", "site": "Latur, MH", "closedOn": "", "name": "Aditya Green", "capacity": "261kWh", "hoto": "✓", "diligence": "✓", "supply": "", "installation": "", "commissioning": "", "sku": "261E (x1) - Elecnova", "notes": "", "completed": false, "completedOn": ""}, {"id": "p7", "status": "✓", "site": "RJ (Multiple)", "closedOn": "", "name": "Rays Experts (5)", "capacity": "6.27MWh", "hoto": "✓", "diligence": "", "supply": "", "installation": "", "commissioning": "", "sku": "418kWh (x15) - Hexon", "notes": "", "completed": false, "completedOn": ""}, {"id": "p8", "status": "✓", "site": "Hadapsar, MH", "closedOn": "", "name": "BU Bhandari Energy (1)", "capacity": "3.291MWh", "hoto": "FB", "diligence": "", "supply": "", "installation": "", "commissioning": "", "sku": "418kWh (6), 261E (x3)", "notes": "", "completed": false, "completedOn": ""}, {"id": "p9", "status": "✓", "site": "Hyderabad, TG", "closedOn": "", "name": "Comuti", "capacity": "418kWh", "hoto": "KB", "diligence": "✓", "supply": "✓", "installation": "", "commissioning": "", "sku": "418kWh - Hexon", "notes": "Need to ask installation/commision date", "completed": false, "completedOn": ""}, {"id": "p10", "status": "✓", "site": "Bengaluru, KA?", "closedOn": "", "name": "Pravaig Energy", "capacity": "1044kWh", "hoto": "KB", "diligence": "", "supply": "", "installation": "", "commissioning": "", "sku": "261Kwh (x4) with STS- Elecnova", "notes": "Supply is pending. It will be reached after 10 nov.", "completed": false, "completedOn": ""}, {"id": "p11", "status": "✓", "site": "?", "closedOn": "22.09.26", "name": "Polaris Energy", "capacity": "522kWh", "hoto": "FB", "diligence": "", "supply": "", "installation": "", "commissioning": "", "sku": "522kWh", "notes": "Supply is pending. It will be reached in Dec.", "completed": false, "completedOn": ""}, {"id": "p12", "status": "✓", "site": "Mundsar, RJ", "closedOn": "24.09.26", "name": "Sunsure Energy (3)", "capacity": "2.5MW", "hoto": "KB", "diligence": "", "supply": "", "installation": "", "commissioning": "", "sku": "2.5 MW PCS", "notes": "Supply is pending.", "completed": false, "completedOn": ""}, {"id": "p13", "status": "✓", "site": "Mundsar, RJ", "closedOn": "24.09.26", "name": "Sunsure Energy (4)", "capacity": "1672kWh", "hoto": "KB", "diligence": "", "supply": "", "installation": "", "commissioning": "", "sku": "418kWh (x4) - Hexon", "notes": "Supply is pending.", "completed": false, "completedOn": ""}, {"id": "p14", "status": "✓", "site": "Delhi", "closedOn": "24.09.26", "name": "Trident", "capacity": "200kWh", "hoto": "SK", "diligence": "", "supply": "", "installation": "", "commissioning": "", "sku": "128kWh (2) - GW", "notes": "Supply is pending.", "completed": false, "completedOn": ""}], "inventory": [{"id": "i1", "sku": "418H", "remarks": "In Port", "stock": 9}, {"id": "i2", "sku": "257W", "remarks": "", "stock": 2}, {"id": "i3", "sku": "418W", "remarks": "", "stock": 16}, {"id": "i4", "sku": "522W", "remarks": "", "stock": 8}, {"id": "i5", "sku": "128G", "remarks": "with 5 MPPTs", "stock": 16}, {"id": "i6", "sku": "261E", "remarks": "", "stock": 8}, {"id": "i7", "sku": "261W", "remarks": "", "stock": 16}], "invColumns": ["p5", "p7", "p11", "p4", "p8", "p6", "p10", "p13", "p14"], "allocations": {"i1": {"p4": 4, "p8": 6, "p13": 4}, "i3": {"p5": 6, "p7": 15}, "i4": {"p11": 1}, "i5": {"p14": 2}, "i6": {"p8": 3, "p6": 1, "p10": 4}}};
+const LS = { data:'upt.data', name:'upt.name', gh:'upt.gh' };
+const STAGES = ['hoto','diligence','supply','installation','commissioning'];
+const PCOLS = ['status','site','closedOn','name','capacity',...STAGES,'sku','notes'];
+const HEAD = {status:'Status',site:'Customer / Site',closedOn:'Closed on',name:'Project / Requirement',capacity:'Capacity',hoto:'HOTO',diligence:'Tech Diligence',supply:'Supply',installation:'Installation',commissioning:'Commissioning',sku:'SKU',notes:'Notes / Uncertainty',completedOn:'Completed on'};
+
+let D = null;          // working data
+let dirty = false;
+let remoteSha = null;  // sha of project-tracker-data.json on GitHub when loaded
+let loadedStamp = null;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const lsSet = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
+const today = () => { const d=new Date(); return [d.getDate(),d.getMonth()+1,d.getFullYear()%100].map(n=>String(n).padStart(2,'0')).join('.'); };
+const b64enc = s => btoa(unescape(encodeURIComponent(s)));
+const b64dec = s => decodeURIComponent(escape(atob(s.replace(/\n/g,''))));
+
+function toast(msg, err){ const t=$('#toast'); t.textContent=msg; t.className='toast show'+(err?' err':''); clearTimeout(t._h); t._h=setTimeout(()=>t.className='toast',3200); }
+function setDirty(v=true){
+  dirty=v;
+  $('#saveBtn').classList.toggle('dirty',v);
+  const s=$('#saveState'); s.textContent=v?'Unsaved changes':''; s.className='save-state'+(v?' dirty':'');
+}
+window.addEventListener('beforeunload', e => { if(dirty){ e.preventDefault(); e.returnValue=''; } });
+
+/* ---------- GitHub config ---------- */
+function ghConfig(){
+  let c = {}; try { c = JSON.parse(lsGet(LS.gh)||'{}'); } catch(e){}
+  const h = location.hostname, m = h.match(/^([^.]+)\.github\.io$/i);
+  if(m){
+    c.owner = c.owner || m[1];
+    const seg = location.pathname.split('/').filter(Boolean)[0];
+    c.repo = c.repo || (seg && !seg.endsWith('.html') ? seg : m[1]+'.github.io');
+  }
+  c.branch = c.branch || 'main'; c.path = c.path || 'project-tracker-data.json';
+  return c;
+}
+function ghHeaders(c){ const h={'Accept':'application/vnd.github+json'}; if(c.token) h.Authorization='Bearer '+c.token; return h; }
+const ghUrl = c => `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${c.path.split('/').map(encodeURIComponent).join('/')}`;
+
+async function ghRead(c){
+  const r = await fetch(ghUrl(c)+'?ref='+encodeURIComponent(c.branch)+'&t='+Date.now(), {headers:ghHeaders(c), cache:'no-store'});
+  if(!r.ok) throw new Error('GitHub read failed ('+r.status+')');
+  const j = await r.json();
+  return { data: JSON.parse(b64dec(j.content)), sha: j.sha };
+}
+
+/* ---------- Load ---------- */
+async function load(){
+  let src = null, data = null;
+  const c = ghConfig();
+  if(c.owner && c.repo){
+    try { const g = await ghRead(c); data = g.data; remoteSha = g.sha; src='github'; } catch(e){ console.warn(e); }
+  }
+  if(!data){
+    try { const r = await fetch('project-tracker-data.json?t='+Date.now(), {cache:'no-store'}); if(r.ok){ data = await r.json(); src='file'; } } catch(e){}
+  }
+  if(!data){ data = JSON.parse(JSON.stringify(DEFAULT_DATA)); src='embedded'; }
+
+  // A copy saved in this browser that is newer (e.g. GitHub Pages hasn't rebuilt yet, or not connected)
+  let local=null; try { local = JSON.parse(lsGet(LS.data)||'null'); } catch(e){}
+  if(local && local.meta && (!data.meta || local.meta.updatedAt > data.meta.updatedAt)){
+    data = local;
+    banner(src==='github'
+      ? 'Showing the copy saved in this browser — it is newer than the one on GitHub. Press Save to publish it.'
+      : 'Showing the copy saved in this browser. The website copy may still be updating (GitHub Pages takes ~1 minute), or this browser isn’t connected to GitHub yet (Settings).');
+  }
+  D = normalise(data);
+  loadedStamp = D.meta.updatedAt;
+  renderAll();
+}
+function normalise(d){
+  d.meta = d.meta || {}; d.projects = d.projects || []; d.inventory = d.inventory || [];
+  d.allocations = d.allocations || {}; d.invColumns = (d.invColumns || []).filter(id => d.projects.some(p=>p.id===id));
+  return d;
+}
+function banner(msg){ const b=$('#banner'); b.textContent=msg||''; b.classList.toggle('show',!!msg); }
+
+/* ---------- Header ---------- */
+function renderMeta(){
+  const m = D.meta; let when='—';
+  if(m.updatedAt){ const d=new Date(m.updatedAt); when = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+', '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+  $('#updated').innerHTML = `Last updated <b>${esc(when)}</b><br>by <b>${esc(m.updatedBy||'—')}</b>`;
+}
+
+/* ---------- Projects ---------- */
+function stageClass(v){ v=(v||'').trim(); return v==='✓'?' ok':(v==='✗'?' no':''); }
+function projRow(p, i, done){
+  const cells = PCOLS.map(k => {
+    if(k==='status'){
+      const ok = p.status !== '✗';
+      return `<td class="num"><button class="status ${ok?'ok':'no'}" data-k="status" title="Click to switch ✓ / ✗">${ok?'✓':'✗'}</button></td>`;
+    }
+    if(k==='notes') return `<td><textarea class="cell" data-k="notes" rows="1">${esc(p.notes)}</textarea></td>`;
+    if(STAGES.includes(k)) return `<td><input class="cell w-stage stage${stageClass(p[k])}" data-k="${k}" list="stageOpts" value="${esc(p[k])}"></td>`;
+    const w = {site:'w-site',closedOn:'w-date',name:'w-name',capacity:'w-cap',sku:'w-sku'}[k]||'';
+    return `<td><input class="cell ${w}" data-k="${k}" value="${esc(p[k])}"${k==='closedOn'?' placeholder="DD.MM.YY"':''}></td>`;
+  }).join('');
+  const extra = done ? `<td><input class="cell w-date" data-k="completedOn" value="${esc(p.completedOn)}"></td>` : '';
+  const act = done
+    ? `<button class="btn sm" data-act="restore">Restore</button> <button class="iconbtn" data-act="del" title="Delete">✕</button>`
+    : `<button class="btn sm" data-act="complete" title="Move to Completed">✔ Complete</button> <button class="iconbtn" data-act="del" title="Delete project">✕</button>`;
+  return `<tr data-id="${p.id}"><td class="sr">${i+1}</td>${cells}${extra}<td class="act">${act}</td></tr>`;
+}
+function renderProjects(){
+  const act = D.projects.filter(p=>!p.completed), done = D.projects.filter(p=>p.completed);
+  $('#projTable tbody').innerHTML = act.length ? act.map((p,i)=>projRow(p,i,false)).join('') : `<tr><td colspan="14" class="empty">No active projects. Click “+ Add project”.</td></tr>`;
+  $('#doneTable tbody').innerHTML = done.length ? done.map((p,i)=>projRow(p,i,true)).join('') : `<tr><td colspan="15" class="empty">Nothing completed yet.</td></tr>`;
+  $('#cntProjects').textContent = act.length; $('#cntDone').textContent = done.length;
+  document.querySelectorAll('textarea.cell').forEach(autoGrow);
+  applySearch();
+}
+function autoGrow(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
+function applySearch(){
+  const q = $('#search').value.trim().toLowerCase();
+  document.querySelectorAll('#projTable tbody tr[data-id], #doneTable tbody tr[data-id]').forEach(tr=>{
+    const p = D.projects.find(x=>x.id===tr.dataset.id);
+    tr.hidden = q && !Object.values(p).join(' ').toLowerCase().includes(q);
+  });
+  if(q && D.projects.some(p=>p.completed && Object.values(p).join(' ').toLowerCase().includes(q))) $('#completedBox').open = true;
+}
+function onProjInput(e){
+  const el = e.target, tr = el.closest('tr[data-id]'); if(!tr || !el.dataset.k) return;
+  const p = D.projects.find(x=>x.id===tr.dataset.id); p[el.dataset.k] = el.value;
+  if(el.tagName==='TEXTAREA') autoGrow(el);
+  if(STAGES.includes(el.dataset.k)) el.className = 'cell w-stage stage'+stageClass(el.value);
+  if(el.dataset.k==='name') renderInventory();
+  setDirty();
+}
+async function onProjClick(e){
+  const b = e.target.closest('button'); if(!b) return;
+  const tr = b.closest('tr[data-id]'); if(!tr) return;
+  const p = D.projects.find(x=>x.id===tr.dataset.id);
+  if(b.dataset.k==='status'){ p.status = p.status==='✗' ? '✓' : '✗'; renderProjects(); setDirty(); return; }
+  const a = b.dataset.act;
+  if(a==='complete'){ p.completed=true; p.completedOn=today(); renderAll(); setDirty(); toast(`“${p.name||'Project'}” moved to Completed`); }
+  if(a==='restore'){ p.completed=false; p.completedOn=''; renderAll(); setDirty(); }
+  if(a==='del'){
+    const n = Object.values(D.allocations).reduce((s,r)=>s+(+r[p.id]||0),0);
+    if(!await confirmBox('Delete project?', `“${esc(p.name||'Untitled')}” will be removed${n?` along with its ${n} allocated inventory unit(s)`:''}. This can’t be undone after you Save.`, 'Delete', true)) return;
+    D.projects = D.projects.filter(x=>x!==p);
+    D.invColumns = D.invColumns.filter(id=>id!==p.id);
+    Object.values(D.allocations).forEach(r=>delete r[p.id]);
+    renderAll(); setDirty();
+  }
+}
+
+/* ---------- Inventory ---------- */
+function allocOf(iid,pid){ return +((D.allocations[iid]||{})[pid])||0; }
+function totalAlloc(iid){ return D.invColumns.reduce((s,pid)=>s+allocOf(iid,pid),0); }
+function renderInventory(){
+  const cols = D.invColumns.map(id=>D.projects.find(p=>p.id===id)).filter(Boolean);
+  $('#invTable thead').innerHTML = `<tr><th>SKU</th><th>Location / Remarks</th><th class="num">Stock</th><th class="num">Allocated</th><th class="num">Surplus</th>${
+    cols.map(p=>`<th class="num${p.completed?' done':''}" title="${esc(p.name)}${p.completed?' (completed)':''}"><div class="th-proj">${esc(p.name||'Untitled')}<button class="iconbtn" data-rmcol="${p.id}" title="Remove this project column">✕</button></div></th>`).join('')
+  }<th></th></tr>`;
+  $('#invTable tbody').innerHTML = D.inventory.length ? D.inventory.map(it=>{
+    const tot = totalAlloc(it.id), sur = (+it.stock||0) - tot;
+    return `<tr data-iid="${it.id}">
+      <td><input class="cell" data-f="sku" value="${esc(it.sku)}" style="min-width:90px;font-weight:600"></td>
+      <td><input class="cell" data-f="remarks" value="${esc(it.remarks)}" style="min-width:120px"></td>
+      <td class="num"><input class="cell num" type="number" min="0" data-f="stock" value="${esc(it.stock)}"></td>
+      <td class="ro num" data-tot>${tot}</td>
+      <td class="surplus ${sur<0?'neg':sur===0?'zero':'pos'}" data-sur>${sur}</td>
+      ${cols.map(p=>`<td class="num${p.completed?' done':''}"><input class="cell num" type="number" min="0" data-pid="${p.id}" value="${allocOf(it.id,p.id)||''}" placeholder="–"></td>`).join('')}
+      <td class="act"><button class="iconbtn" data-rmsku title="Remove SKU (depleted)">✕</button></td></tr>`;
+  }).join('') : `<tr><td colspan="${cols.length+6}" class="empty">No inventory. Click “+ Add inventory (SKU)”.</td></tr>`;
+  const st = D.inventory.reduce((s,i)=>s+(+i.stock||0),0), al = D.inventory.reduce((s,i)=>s+totalAlloc(i.id),0);
+  $('#invTable tfoot').innerHTML = D.inventory.length ? `<tr><td colspan="2">Total</td><td class="num">${st}</td><td class="num">${al}</td><td class="num">${st-al}</td>${cols.map(p=>`<td class="num">${D.inventory.reduce((s,i)=>s+allocOf(i.id,p.id),0)||''}</td>`).join('')}<td></td></tr>` : '';
+  $('#cntInventory').textContent = D.inventory.length;
+  const avail = D.projects.filter(p=>!p.completed && !D.invColumns.includes(p.id));
+  $('#addColSel').innerHTML = avail.length ? `<option value="">Choose a project…</option>`+avail.map(p=>`<option value="${p.id}">${esc(p.name||'Untitled')}</option>`).join('') : `<option value="">All active projects already have a column</option>`;
+}
+function refreshInvTotals(tr){
+  const it = D.inventory.find(x=>x.id===tr.dataset.iid), tot=totalAlloc(it.id), sur=(+it.stock||0)-tot;
+  tr.querySelector('[data-tot]').textContent = tot;
+  const s = tr.querySelector('[data-sur]'); s.textContent = sur; s.className = 'surplus '+(sur<0?'neg':sur===0?'zero':'pos');
+  const cols = D.invColumns, foot = $('#invTable tfoot tr'); if(!foot) return;
+  const st = D.inventory.reduce((s,i)=>s+(+i.stock||0),0), al = D.inventory.reduce((s,i)=>s+totalAlloc(i.id),0);
+  const tds = foot.children; tds[1].textContent = st;
+  tds[2].textContent = al; tds[3].textContent = st-al;
+  cols.forEach((pid,k)=>tds[4+k].textContent = D.inventory.reduce((s,i)=>s+allocOf(i.id,pid),0)||'');
+}
+function onInvInput(e){
+  const el=e.target, tr=el.closest('tr[data-iid]'); if(!tr) return;
+  const it = D.inventory.find(x=>x.id===tr.dataset.iid);
+  if(el.dataset.f){ it[el.dataset.f] = el.dataset.f==='stock' ? Math.max(0, parseInt(el.value)||0) : el.value; }
+  if(el.dataset.pid){
+    const v = Math.max(0, parseInt(el.value)||0); D.allocations[it.id] = D.allocations[it.id]||{};
+    if(v) D.allocations[it.id][el.dataset.pid]=v; else delete D.allocations[it.id][el.dataset.pid];
+  }
+  refreshInvTotals(tr); setDirty();
+}
+async function onInvClick(e){
+  const rc = e.target.closest('[data-rmcol]');
+  if(rc){
+    const pid = rc.dataset.rmcol, p = D.projects.find(x=>x.id===pid);
+    const n = D.inventory.reduce((s,i)=>s+allocOf(i.id,pid),0);
+    if(n && !await confirmBox('Remove project column?', `“${esc(p.name)}” has ${n} unit(s) allocated. Removing the column releases them back to surplus.`, 'Remove', true)) return;
+    D.invColumns = D.invColumns.filter(x=>x!==pid); Object.values(D.allocations).forEach(r=>delete r[pid]);
+    renderInventory(); setDirty(); return;
+  }
+  const rs = e.target.closest('[data-rmsku]');
+  if(rs){
+    const tr = rs.closest('tr[data-iid]'), it = D.inventory.find(x=>x.id===tr.dataset.iid);
+    if(!await confirmBox('Remove SKU?', `Remove <b>${esc(it.sku||'this SKU')}</b> (stock ${+it.stock||0}, ${totalAlloc(it.id)} allocated) from inventory? Use this when the stock is used up.`, 'Remove', true)) return;
+    D.inventory = D.inventory.filter(x=>x!==it); delete D.allocations[it.id];
+    renderInventory(); setDirty();
+  }
+}
+
+/* ---------- Modals ---------- */
+function openModal(html){ $('#modal').innerHTML=html; $('#modalBg').classList.add('show'); const f=$('#modal').querySelector('input,select'); if(f) setTimeout(()=>f.focus(),30); }
+function closeModal(){ $('#modalBg').classList.remove('show'); }
+function confirmBox(title, msg, ok='OK', danger=false){
+  return new Promise(res=>{
+    openModal(`<h3>${title}</h3><p>${msg}</p><div class="actions"><button class="btn" id="mNo">Cancel</button><button class="btn ${danger?'danger':'primary'}" id="mYes">${ok}</button></div>`);
+    $('#mNo').onclick=()=>{closeModal();res(false)}; $('#mYes').onclick=()=>{closeModal();res(true)};
+  });
+}
+
+function addProjectModal(){
+  openModal(`<h3>Add project</h3><p>The rest of the details can be filled in straight in the table.</p>
+    <div class="field"><label>Project / Requirement *</label><input id="np_name" placeholder="e.g. Sunsure Energy (5)"></div>
+    <div class="row2"><div class="field"><label>Customer / Site</label><input id="np_site" placeholder="e.g. Mundsar, RJ"></div>
+    <div class="field"><label>Closed on</label><input id="np_closed" value="${today()}" placeholder="DD.MM.YY"></div></div>
+    <div class="row2"><div class="field"><label>Capacity</label><input id="np_cap" placeholder="e.g. 1672kWh"></div>
+    <div class="field"><label>SKU</label><input id="np_sku" placeholder="e.g. 418kWh (x4) - Hexon"></div></div>
+    <div class="actions"><button class="btn" id="mNo">Cancel</button><button class="btn primary" id="mYes">Add project</button></div>`);
+  $('#mNo').onclick=closeModal;
+  $('#mYes').onclick=()=>{
+    const name=$('#np_name').value.trim(); if(!name){ $('#np_name').focus(); return; }
+    const p={id:uid('p'),status:'✓',site:$('#np_site').value.trim(),closedOn:$('#np_closed').value.trim(),name,capacity:$('#np_cap').value.trim(),hoto:'',diligence:'',supply:'',installation:'',commissioning:'',sku:$('#np_sku').value.trim(),notes:'',completed:false,completedOn:''};
+    D.projects.push(p); closeModal(); renderAll(); setDirty(); toast('Project added — remember to Save');
+  };
+}
+function addSkuModal(){
+  openModal(`<h3>Add inventory</h3>
+    <div class="row2"><div class="field"><label>SKU *</label><input id="ns_sku" placeholder="e.g. 418H"></div>
+    <div class="field"><label>Stock (units)</label><input id="ns_stock" type="number" min="0" value="0"></div></div>
+    <div class="field"><label>Location / Remarks</label><input id="ns_rem" placeholder="e.g. In Port"></div>
+    <div class="actions"><button class="btn" id="mNo">Cancel</button><button class="btn primary" id="mYes">Add</button></div>`);
+  $('#mNo').onclick=closeModal;
+  $('#mYes').onclick=()=>{
+    const sku=$('#ns_sku').value.trim(); if(!sku){ $('#ns_sku').focus(); return; }
+    D.inventory.push({id:uid('i'),sku,remarks:$('#ns_rem').value.trim(),stock:Math.max(0,parseInt($('#ns_stock').value)||0)});
+    closeModal(); renderInventory(); setDirty();
+  };
+}
+function settingsModal(){
+  const c = ghConfig();
+  openModal(`<h3>Settings</h3>
+    <div class="field"><label>Your name (shown as “updated by”)</label><input id="s_name" value="${esc(lsGet(LS.name)||'')}" placeholder="e.g. Aditya"></div>
+    <p style="margin-top:14px"><b style="color:var(--ink)">GitHub connection</b><br>Needed so that Save updates the website for everyone. Set up once per browser.</p>
+    <div class="row2"><div class="field"><label>GitHub owner (user / org)</label><input id="s_owner" value="${esc(c.owner||'')}"></div>
+    <div class="field"><label>Repository</label><input id="s_repo" value="${esc(c.repo||'')}"></div></div>
+    <div class="row2"><div class="field"><label>Branch</label><input id="s_branch" value="${esc(c.branch)}"></div>
+    <div class="field"><label>Data file</label><input id="s_path" value="${esc(c.path)}"></div></div>
+    <div class="field"><label>Access token</label><input id="s_token" type="password" value="${esc(c.token||'')}" placeholder="github_pat_…" autocomplete="off"></div>
+    <div class="hint">Create one at GitHub → Settings → Developer settings → <b>Fine-grained tokens</b> → Generate. Repository access: <i>only this repo</i>. Permissions: <b>Contents → Read and write</b>. The token stays in this browser only and is never written into the website files.</div>
+    <div class="actions"><button class="btn danger" id="s_clear">Forget token</button><span class="spacer"></span><button class="btn" id="mNo">Cancel</button><button class="btn primary" id="mYes">Save settings</button></div>`);
+  $('#mNo').onclick=closeModal;
+  $('#s_clear').onclick=()=>{ const g=JSON.parse(lsGet(LS.gh)||'{}'); delete g.token; lsSet(LS.gh,JSON.stringify(g)); closeModal(); toast('Token removed from this browser'); };
+  $('#mYes').onclick=async ()=>{
+    lsSet(LS.name, $('#s_name').value.trim());
+    const g={owner:$('#s_owner').value.trim(),repo:$('#s_repo').value.trim(),branch:$('#s_branch').value.trim()||'main',path:$('#s_path').value.trim()||'project-tracker-data.json',token:$('#s_token').value.trim()};
+    lsSet(LS.gh, JSON.stringify(g)); closeModal();
+    if(g.owner && g.repo && g.token){
+      try { const r = await ghRead(g); remoteSha = r.sha; toast('Connected to GitHub ✓'); }
+      catch(e){ toast('Could not reach '+g.owner+'/'+g.repo+' — check owner, repo and token', true); }
+    } else toast('Settings saved');
+  };
+}
+
+/* ---------- Save ---------- */
+function askName(){
+  return new Promise(res=>{
+    openModal(`<h3>Who is saving?</h3><p>Your name appears as “Last updated by”. You’ll only be asked once on this browser.</p>
+      <div class="field"><label>Your name</label><input id="an" placeholder="e.g. Aditya"></div>
+      <div class="actions"><button class="btn" id="mNo">Cancel</button><button class="btn primary" id="mYes">Continue</button></div>`);
+    $('#mNo').onclick=()=>{closeModal();res(null)};
+    $('#mYes').onclick=()=>{ const v=$('#an').value.trim(); if(!v){$('#an').focus();return;} lsSet(LS.name,v); closeModal(); res(v); };
+    $('#an').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#mYes').click(); });
+  });
+}
+async function save(){
+  if(document.activeElement) document.activeElement.blur();
+  const name = lsGet(LS.name) || await askName(); if(!name) return;
+  const c = ghConfig();
+  const prevMeta = {...D.meta};
+  D.meta = { updatedAt: new Date().toISOString(), updatedBy: name };
+  const json = JSON.stringify(D, null, 2);
+
+  if(!(c.owner && c.repo && c.token)){
+    lsSet(LS.data, json); setDirty(false); renderMeta();
+    openModal(`<h3>Saved in this browser only</h3><p>This browser isn’t connected to GitHub yet, so other people won’t see these changes. Connect it in Settings (one-time), then press Save again — or download <code>project-tracker-data.json</code> and upload it to the repo yourself.</p>
+      <div class="actions"><button class="btn" id="dl">Download project-tracker-data.json</button><button class="btn" id="mNo">Close</button><button class="btn primary" id="mYes">Open Settings</button></div>`);
+    $('#dl').onclick=()=>download('project-tracker-data.json', json, 'application/json');
+    $('#mNo').onclick=closeModal; $('#mYes').onclick=settingsModal;
+    return;
+  }
+  const btn=$('#saveBtn'); btn.disabled=true; btn.textContent='Saving…';
+  try{
+    // Check nobody else saved since we loaded
+    let sha = remoteSha;
+    try {
+      const cur = await ghRead(c); sha = cur.sha;
+      const theirs = cur.data.meta||{};
+      if(loadedStamp && theirs.updatedAt && theirs.updatedAt > loadedStamp){
+        const when = new Date(theirs.updatedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+        if(!await confirmBox('Someone else saved meanwhile', `<b>${esc(theirs.updatedBy||'Someone')}</b> saved at ${esc(when)}, after you opened this page. Saving now will overwrite their changes.<br><br>To be safe: Cancel, copy your edits somewhere, reload the page, and re-apply them.`, 'Overwrite anyway', true)){ D.meta=prevMeta; return; }
+      }
+    } catch(e){ if(!String(e.message).includes('404')) throw e; sha = null; }
+    const body = { message:`Tracker updated by ${name}`, content:b64enc(json+'\n'), branch:c.branch }; if(sha) body.sha=sha;
+    const r = await fetch(ghUrl(c), {method:'PUT', headers:{...ghHeaders(c),'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    if(!r.ok){ const t = await r.json().catch(()=>({})); throw new Error((t.message||'Save failed')+' ('+r.status+')'); }
+    const j = await r.json(); remoteSha = j.content.sha; loadedStamp = D.meta.updatedAt;
+    lsSet(LS.data, json); setDirty(false); renderMeta(); banner('');
+    toast('Saved ✓ — the website will show it to everyone within about a minute');
+  } catch(e){
+    D.meta = prevMeta; renderMeta();
+    toast('Save failed: '+e.message+'. Your edits are still here — try again.', true);
+  } finally { btn.disabled=false; btn.textContent='Save'; }
+}
+
+/* ---------- CSV ---------- */
+function download(name, text, type='text/csv'){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+const csvRow = r => r.map(v=>{ v=String(v??''); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(',');
+function csvProjects(){
+  const rows=[['Sr. No.','State',...PCOLS.map(k=>HEAD[k]),'Completed on']];
+  let a=0,d=0; D.projects.forEach(p=>rows.push([p.completed?++d:++a, p.completed?'Completed':'Active', ...PCOLS.map(k=>p[k]), p.completedOn]));
+  download(`Projects_${today()}.csv`, '﻿'+rows.map(csvRow).join('\n'));
+}
+function csvInventory(){
+  const cols=D.invColumns.map(id=>D.projects.find(p=>p.id===id));
+  const rows=[['SKU','Location / Remarks','Stock','Allocated','Surplus',...cols.map(p=>p.name)]];
+  D.inventory.forEach(it=>{ const t=totalAlloc(it.id); rows.push([it.sku,it.remarks,it.stock,t,(+it.stock||0)-t,...cols.map(p=>allocOf(it.id,p.id)||'')]); });
+  download(`Inventory_${today()}.csv`, '﻿'+rows.map(csvRow).join('\n'));
+}
+
+/* ---------- Wire up ---------- */
+function renderAll(){ renderMeta(); renderProjects(); renderInventory(); }
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));
+  $('#tab-projects').hidden = t.dataset.tab!=='projects'; $('#tab-inventory').hidden = t.dataset.tab!=='inventory';
+  if(t.dataset.tab==='projects') document.querySelectorAll('textarea.cell').forEach(autoGrow);
+});
+['#projTable','#doneTable'].forEach(s=>{ $(s).addEventListener('input',onProjInput); $(s).addEventListener('click',onProjClick); });
+$('#invTable').addEventListener('input',onInvInput); $('#invTable').addEventListener('click',onInvClick);
+$('#search').addEventListener('input',applySearch);
+$('#addProject').onclick=addProjectModal; $('#addSku').onclick=addSkuModal; $('#settingsBtn').onclick=settingsModal; $('#saveBtn').onclick=save;
+$('#addColBtn').onclick=()=>{ const v=$('#addColSel').value; if(!v){ toast('Pick a project first'); return; } D.invColumns.push(v); renderInventory(); setDirty(); };
+$('#csvProjects').onclick=csvProjects; $('#csvInventory').onclick=csvInventory;
+$('#modalBg').addEventListener('click',e=>{ if(e.target.id==='modalBg') closeModal(); });
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey) && e.key==='s'){ e.preventDefault(); save(); }
+  if(e.key==='Escape') closeModal();
+});
+load();
+</script>
+</body>
+</html>
