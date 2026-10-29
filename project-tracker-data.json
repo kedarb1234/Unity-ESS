@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updatedAt": "2026-10-29T02:38:53.941Z",
+    "updatedAt": "2026-10-29T03:03:42.324Z",
     "updatedBy": "Kedar"
   },
   "projects": [
@@ -417,7 +417,8 @@
     "p14",
     "pmvrt1qzohcok",
     "pmvrt2jvhk5el",
-    "pmvrt3akl22pp"
+    "pmvrt3akl22pp",
+    "pmvrtadtinlx2"
   ],
   "allocations": {
     "i1": {
@@ -437,9 +438,10 @@
       "p14": 2
     },
     "i6": {
-      "p8": 3,
       "p6": 1,
-      "p10": 4
+      "p10": 4,
+      "p8": 2,
+      "pmvrtadtinlx2": 1
     }
   }
 }
